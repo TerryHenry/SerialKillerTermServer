@@ -1,0 +1,688 @@
+<title>Serial Killer Terminal Server Handbook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #eef1ee;
+    --panel: #e3e8e2;
+    --panel-2: #dbe1da;
+    --ink: #1a231f;
+    --ink-dim: #4b5650;
+    --border: #c7d0c4;
+    --accent: #a8621f;
+    --accent-ink: #ffffff;
+    --ok: #3c7d5e;
+    --ok-bg: #dcece2;
+    --danger: #a13a2c;
+    --danger-bg: #f3e0da;
+    --code-bg: #dde3db;
+    --link: #8a5219;
+    --shadow: 0 1px 2px rgba(20, 30, 22, 0.06), 0 6px 20px rgba(20, 30, 22, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14181a;
+      --panel: #1b2123;
+      --panel-2: #21282a;
+      --ink: #e7ece7;
+      --ink-dim: #9caba1;
+      --border: #333d38;
+      --accent: #d99a4e;
+      --accent-ink: #1a1206;
+      --ok: #6cbb93;
+      --ok-bg: #1c2f26;
+      --danger: #e08268;
+      --danger-bg: #33211c;
+      --code-bg: #232b28;
+      --link: #e2ab63;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181a;
+    --panel: #1b2123;
+    --panel-2: #21282a;
+    --ink: #e7ece7;
+    --ink-dim: #9caba1;
+    --border: #333d38;
+    --accent: #d99a4e;
+    --accent-ink: #1a1206;
+    --ok: #6cbb93;
+    --ok-bg: #1c2f26;
+    --danger: #e08268;
+    --danger-bg: #33211c;
+    --code-bg: #232b28;
+    --link: #e2ab63;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+
+  a { color: var(--link); }
+  code, kbd, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    font-size: 0.88em;
+  }
+  kbd {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 0.05em 0.5em;
+    font-size: 0.85em;
+    font-weight: 500;
+  }
+  h1, h2, h3 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 700;
+    text-wrap: balance;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+
+  /* ---------- Header ---------- */
+  .masthead {
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .masthead-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 30px 32px 26px;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 3px var(--ok-bg);
+  }
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .title-row img {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    flex-shrink: 0;
+  }
+  h1.title {
+    font-size: clamp(26px, 3.6vw, 38px);
+    margin: 10px 0 8px;
+  }
+  .subtitle {
+    color: var(--ink-dim);
+    font-size: 16.5px;
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .factstrip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 22px;
+    box-shadow: var(--shadow);
+  }
+  .fact {
+    background: var(--bg);
+    padding: 13px 16px;
+  }
+  .fact .k {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .fact .v {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14.5px;
+    font-weight: 500;
+  }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 48px;
+    padding: 40px 32px 100px;
+    align-items: start;
+  }
+  nav.toc {
+    position: sticky;
+    top: 24px;
+    font-size: 13.5px;
+  }
+  nav.toc .group-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 20px 0 8px;
+  }
+  nav.toc .group-label:first-child { margin-top: 0; }
+  nav.toc ul { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 0; }
+  nav.toc a {
+    display: block;
+    padding: 5px 0 5px 12px;
+    border-left: 2px solid transparent;
+    color: var(--ink-dim);
+    text-decoration: none;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  nav.toc a:hover { color: var(--ink); border-color: var(--border); }
+
+  main { min-width: 0; }
+  section { margin-bottom: 56px; scroll-margin-top: 20px; }
+  section > h2 {
+    font-size: 23px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin: 0 0 18px;
+  }
+  section h3 {
+    font-size: 17px;
+    margin: 28px 0 10px;
+    scroll-margin-top: 20px;
+  }
+  .lede {
+    max-width: 68ch;
+  }
+  p, li { max-width: 68ch; }
+  ul, ol { padding-left: 1.3em; }
+  li + li { margin-top: 6px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .card + .card { margin-top: 14px; }
+  .card h4 {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .card p:last-child { margin-bottom: 0; }
+
+  .tab-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  thead th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: var(--panel);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--panel); }
+  td code { white-space: nowrap; }
+
+  .callout {
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 14px 18px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    max-width: 68ch;
+  }
+  .callout .mark {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+  .callout.warn { background: var(--danger-bg); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+  .callout.warn .mark { background: var(--danger); color: #fff; }
+  .callout.tip { background: var(--ok-bg); border-color: color-mix(in srgb, var(--ok) 35%, var(--border)); }
+  .callout.tip .mark { background: var(--ok); color: #fff; }
+  .callout p { margin: 0; max-width: none; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.mute { background: var(--panel-2); color: var(--ink-dim); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; max-width: 68ch; }
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 38px;
+    margin-bottom: 16px;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: -1px;
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  pre.term {
+    background: #1c231f;
+    color: #d9e6dc;
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13.5px;
+    line-height: 1.65;
+    box-shadow: var(--shadow);
+  }
+  pre.term .c1 { color: #7fa88f; }
+  pre.term .c2 { color: #e2ab63; }
+
+  footer {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px 60px;
+    color: var(--ink-dim);
+    font-size: 13px;
+  }
+  footer .rule { border-top: 1px solid var(--border); margin-bottom: 20px; }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; columns: 2; margin-bottom: 8px; }
+  }
+</style>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <div class="eyebrow">Console Server &middot; Serial &amp; SSH</div>
+    <div class="title-row">
+      <img src="data:image/png;base64,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" alt="Serial Killer Terminal Server logo" />
+      <h1 class="title">Serial Killer Terminal Server Handbook</h1>
+    </div>
+    <p class="subtitle">How to administer and use Serial Killer Terminal Server &mdash; a multi-user, multi-port SSH-to-serial console server that runs on a Raspberry Pi.</p>
+
+    <div class="factstrip">
+      <div class="fact"><span class="k">Web admin UI</span><span class="v">https://&lt;host&gt;:8443</span></div>
+      <div class="fact"><span class="k">SSH console port</span><span class="v">2222</span></div>
+      <div class="fact"><span class="k">TFTP (optional)</span><span class="v">UDP 69</span></div>
+      <div class="fact"><span class="k">Default login</span><span class="v">admin / letmein0!</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" aria-label="Table of contents">
+    <div class="group-label">Start here</div>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#first-login">First login</a></li>
+      <li><a href="#accounts">Three account systems</a></li>
+    </ul>
+    <div class="group-label">Admin UI</div>
+    <ul>
+      <li><a href="#tab-dashboard">Dashboard</a></li>
+      <li><a href="#tab-server">Server</a></li>
+      <li><a href="#tab-ports">Serial Ports</a></li>
+      <li><a href="#tab-tftp">TFTP</a></li>
+      <li><a href="#tab-users">Users</a></li>
+      <li><a href="#tab-sessions">Sessions &amp; Log</a></li>
+    </ul>
+    <div class="group-label">Using it</div>
+    <ul>
+      <li><a href="#connecting">Connecting over SSH</a></li>
+      <li><a href="#access-modes">Access modes &amp; permissions</a></li>
+      <li><a href="#tftp-usage">Transferring files</a></li>
+    </ul>
+    <div class="group-label">Reference</div>
+    <ul>
+      <li><a href="#security">Security notes</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <section id="overview">
+      <h2>Overview</h2>
+      <p class="lede">Serial Killer Terminal Server turns a Raspberry Pi into a console server &mdash; the kind of appliance you'd otherwise buy as a Digi PortServer or Opengear box. Plug in one or more USB-serial adapters, wire them to routers, switches, lab equipment, or anything else with a serial console port, and it lets your team reach any of them over SSH instead of walking over with a laptop and a cable.</p>
+      <p class="lede">Two interfaces make up the appliance: a <strong>web admin UI</strong> for configuration, and an <strong>SSH server</strong> that end users actually connect through to reach a serial port. They're independent &mdash; you don't need a web-UI account to use SSH, and SSH users never see the admin UI.</p>
+      <div class="callout tip">
+        <span class="mark">No hard limits</span>
+        <p>Configure as many serial ports and SSH users as you want &mdash; nothing in the software caps either. The real ceiling is physical: how many USB-serial adapters you can plug in (via a hub if needed) and the Pi's own RAM/CPU. The one genuine limit is the <strong>web admin account</strong> &mdash; there's only one, not a list.</p>
+      </div>
+    </section>
+
+    <section id="first-login">
+      <h2>First login</h2>
+      <ol class="steps">
+        <li>Visit <code>https://&lt;pi-hostname-or-ip&gt;:8443</code> in a browser. The certificate is self-signed, so you'll get a warning &mdash; proceed past it.</li>
+        <li>Sign in with the default account: <code>admin</code> / <code>letmein0!</code>.</li>
+        <li>You'll land directly on a password-change screen and can't do anything else until you set a new one. This is enforced by the server itself, not just hidden by the page, and it won't accept <code>letmein0!</code> as the replacement.</li>
+        <li>Once changed, you're in. Head to <a href="#tab-ports">Serial Ports</a> and <a href="#tab-users">Users</a> to start configuring.</li>
+      </ol>
+      <div class="callout warn">
+        <span class="mark">Note</span>
+        <p>Changing this password only rotates the <em>web UI</em> login. See the next section &mdash; there are two other credentials on this device that don't change automatically.</p>
+      </div>
+    </section>
+
+    <section id="accounts">
+      <h2>Three account systems, not one</h2>
+      <p class="lede">It's easy to assume "the password" is one thing on an appliance like this. Here it's three separate systems, each with its own purpose and its own credentials:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>System</th><th>Used for</th><th>Where it's managed</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Web admin login</strong></td>
+              <td>Configuring the appliance itself</td>
+              <td>Admin Account tab</td>
+              <td><code>admin</code> / <code>letmein0!</code> &mdash; forced change on first login</td>
+            </tr>
+            <tr>
+              <td><strong>SSH console users</strong></td>
+              <td>Reaching serial ports day-to-day</td>
+              <td>Users tab</td>
+              <td>None &mdash; you create every account</td>
+            </tr>
+            <tr>
+              <td><strong>Pi's own Linux login</strong></td>
+              <td>Shell/SSH access to the Pi itself on port 22, for OS-level maintenance</td>
+              <td><code>passwd</code>, at the Linux shell</td>
+              <td><code>admin</code> / <code>letmein0!</code> &mdash; <em>not</em> force-rotated</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The console-server SSH port (<code>2222</code>) and the Pi's own OS-level SSH (<code>22</code>) are easy to conflate because they're both "SSH to the same box" &mdash; but port 2222 drops you into a serial port, while port 22 drops you into a Linux shell on the Pi. See <a href="#security">Security notes</a> for what to do about the Linux account's default password.</p>
+    </section>
+
+    <section id="tab-dashboard">
+      <h2>Web Admin UI</h2>
+      <p class="lede">Eight tabs across the top of the admin UI. Here's what each one does.</p>
+
+      <h3>Dashboard</h3>
+      <div class="card">
+        <p>The landing tab &mdash; a live overview, updating automatically every few seconds without a page refresh.</p>
+        <ul>
+          <li><strong>CPU, Memory, Disk</strong> &mdash; each shown as a percentage with a bar that shifts from the accent color to amber at 70% and red at 90%, plus the raw used/total underneath for memory and disk.</li>
+          <li><strong>Connected Clients</strong> &mdash; the current SSH session count across every port.</li>
+          <li><strong>Clients per Port</strong> &mdash; a breakdown of who's connected to what, useful for spotting a port someone's been sitting on.</li>
+        </ul>
+      </div>
+
+      <h3 id="tab-server">Server</h3>
+      <div class="card">
+        <p>Controls the SSH console server &mdash; the thing end users actually connect to on port 2222.</p>
+        <ul>
+          <li><strong>Listen port</strong> &mdash; defaults to 2222, chosen to stay clear of the Pi's own SSH on 22.</li>
+          <li><strong>Port picker menu</strong> &mdash; when on, a user with no port of their own sees a numbered list of ports to choose from after login. When off, such a user is told to contact an administrator instead.</li>
+          <li><strong>Start automatically on boot</strong> &mdash; on by default.</li>
+          <li><strong>Login banner</strong> &mdash; free text shown to every SSH user right after connecting.</li>
+          <li><strong>Start/Stop</strong> &mdash; the pill next to the button shows live status.</li>
+          <li><strong>Host key fingerprint</strong> &mdash; shown here so you can verify it out-of-band before trusting a new SSH connection.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="tab-ports">
+      <h3>Serial Ports</h3>
+      <div class="card">
+        <p>Add one entry per physical serial line. <strong>Refresh</strong> next to the device-path field lists what the Pi currently sees plugged in (e.g. <code>/dev/ttyUSB0</code>), so you're not guessing at paths.</p>
+        <ul>
+          <li><strong>Label</strong> &mdash; whatever the device actually is: "Core Switch Console," "Lab Router 3."</li>
+          <li><strong>Device path, baud, data/stop bits, parity, RTS/CTS</strong> &mdash; standard serial parameters, matched to the equipment on the other end.</li>
+          <li><strong>Access mode</strong> &mdash; who can connect at once, and who can type. Covered in full in <a href="#access-modes">Access modes &amp; permissions</a>.</li>
+        </ul>
+        <p>Ports are referenced by ID internally, so renaming a label later doesn't break any user's assignment to it.</p>
+      </div>
+    </section>
+
+    <section id="tab-tftp">
+      <h3>TFTP</h3>
+      <div class="card">
+        <p>An optional TFTP server, off by default &mdash; useful alongside serial console access for the classic workflow of pushing firmware or config files to network gear that only accepts them over TFTP.</p>
+        <ul>
+          <li><strong>Listen port</strong> &mdash; defaults to the standard <code>69</code>; the appliance is specifically granted permission to bind it without running as root.</li>
+          <li><strong>Allow uploads</strong> &mdash; when on, clients can write files in, not just read them.</li>
+          <li><strong>Root directory</strong> &mdash; <code>/opt/terminalserver/data/tftp</code> on the Pi. Everything served or received lives there.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>TFTP Directory</h4>
+        <p>The same tab lists what's actually in that root directory &mdash; name, size, and when it was last modified &mdash; so you don't need a separate shell session on the Pi just to check what's there.</p>
+        <ul>
+          <li><strong>Upload File</strong> &mdash; push a file from your own machine straight into the TFTP root (up to 1&nbsp;GB) without needing a TFTP client at all.</li>
+          <li>Click a filename to <strong>download</strong> it directly from the browser.</li>
+          <li><strong>Delete</strong> asks you to confirm, then removes the file immediately &mdash; there's no undo.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="tab-users">
+      <h3>Users</h3>
+      <div class="card">
+        <p>Each row is one SSH console account &mdash; unrelated to the web admin login.</p>
+        <ul>
+          <li><strong>Authentication method</strong> &mdash; password, an SSH public key, or either.</li>
+          <li><strong>Permission</strong> &mdash; <span class="pill ok"><span class="dot"></span>Read/write</span> or <span class="pill mute"><span class="dot"></span>Read-only</span>. Explained together with port access modes below.</li>
+          <li><strong>Default port</strong> &mdash; assign one and the user is dropped straight into it on login, no menu, ever. Leave it unset and they see the port picker (if it's enabled) instead.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="tab-sessions">
+      <h3>Sessions &amp; Log</h3>
+      <div class="tab-grid">
+        <div class="card">
+          <h4>Sessions</h4>
+          <p>Everyone currently connected, which port they're on, and since when. <strong>Disconnect</strong> ends a session immediately &mdash; useful if someone's connection is stuck holding an exclusive port open.</p>
+        </div>
+        <div class="card">
+          <h4>Log</h4>
+          <p>A live stream of connect/disconnect events and server activity, including the TFTP server. It persists &mdash; the last 2,000 lines are kept on disk, so reopening the tab or rebooting the Pi doesn't lose history the way an in-memory-only log would.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="connecting">
+      <h2>Connecting over SSH</h2>
+      <p class="lede">This is what your team actually uses day-to-day. No web browser involved.</p>
+      <pre class="term"><span class="c1"># a user with a port already assigned to them</span>
+ssh -p 2222 alice@terminalserver.local
+
+<span class="c1"># a user without one sees a numbered picker instead, e.g.:</span>
+<span class="c2">Available serial ports:</span>
+  [1] Core Switch Console  (/dev/ttyUSB0 @ 9600)
+  [2] Lab Router 3         (/dev/ttyUSB1 @ 115200)  [2 connected]
+
+Enter port number (or "q" to quit): <span class="c2">1</span></pre>
+
+      <h3>While connected</h3>
+      <p>Everything you type goes straight to the serial device, and everything it sends back appears in your terminal &mdash; a direct pass-through, not a wrapped protocol.</p>
+      <div class="callout tip">
+        <span class="mark">Kbd</span>
+        <p>Press <kbd>Ctrl</kbd>+<kbd>]</kbd> at any time to detach from the current port and return to the picker menu (if a picker is available to you) without ending your SSH session.</p>
+      </div>
+
+      <h3>If your assigned port isn't available</h3>
+      <p>Users with a <em>default port</em> assigned never see the picker menu &mdash; that's deliberate, since they're meant to only ever reach one thing. If that port has been deleted, can't be opened, or drops mid-session, you're disconnected with a clear reason instead of being handed a menu you were never meant to see.</p>
+    </section>
+
+    <section id="access-modes">
+      <h2>Access modes &amp; permissions</h2>
+      <p class="lede">Two independent settings decide who can type on a given connection: the <strong>port's</strong> access mode, and the <strong>user's</strong> permission. Both have to allow writing for a session to actually be able to type &mdash; either one set to read-only wins.</p>
+
+      <h3>Port access modes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mode</th><th>Concurrent sessions</th><th>Who can type</th></tr></thead>
+          <tbody>
+            <tr><td><code>exclusive</code></td><td>One at a time</td><td>That one session</td></tr>
+            <tr><td><code>shared-rw</code></td><td>Unlimited</td><td>Everyone attached &mdash; input from any of them reaches the port, and everyone sees all output</td></tr>
+            <tr><td><code>first-write</code></td><td>Unlimited</td><td>Only the longest-connected session; if they disconnect, the next-oldest remaining session takes over automatically, live</td></tr>
+            <tr><td><code>shared-ro</code></td><td>Unlimited</td><td>Nobody &mdash; pure monitoring</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>User permission</h3>
+      <p>Independently of the port, each user is <strong>read-write</strong> or <strong>read-only</strong>. A read-only user can never type, no matter how permissive the port is &mdash; useful for an observer or trainee account that should only ever watch.</p>
+
+      <div class="callout tip">
+        <span class="mark">Example</span>
+        <p>A <code>shared-rw</code> port with one read-write user and one read-only user behaves like <code>first-write</code> for that pair &mdash; except it's enforced per-account, not by connection order, so it doesn't change if they reconnect in a different sequence.</p>
+      </div>
+    </section>
+
+    <section id="tftp-usage">
+      <h2>Transferring files with TFTP</h2>
+      <p class="lede">Once started on the TFTP tab, point any standard TFTP client at the Pi's address.</p>
+      <pre class="term"><span class="c1"># pull firmware.bin from the Pi's TFTP root</span>
+tftp terminalserver.local
+<span class="c2">tftp&gt;</span> binary
+<span class="c2">tftp&gt;</span> get firmware.bin
+
+<span class="c1"># push a config backup up to the Pi (needs uploads enabled)</span>
+<span class="c2">tftp&gt;</span> put switch-config.txt</pre>
+      <p>Files land in and are served from <code>/opt/terminalserver/data/tftp</code> on the Pi &mdash; drop firmware there ahead of time if devices will be pulling it, or leave uploads on if they'll be pushing configs back.</p>
+    </section>
+
+    <section id="security">
+      <h2>Security notes</h2>
+      <div class="card">
+        <h4>Change the Linux account password too</h4>
+        <p>The web UI forces a password change on first login; the underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) does not. Run <code>passwd</code> after logging in over SSH on port 22 if you haven't already.</p>
+      </div>
+      <div class="card">
+        <h4>The web UI's certificate is self-signed</h4>
+        <p>Generated locally on first boot, fine for a trusted LAN. If you're exposing the admin UI beyond one, put it behind a reverse proxy or VPN, or swap in your own certificate at <code>/opt/terminalserver/data/tls/</code> on the Pi.</p>
+      </div>
+      <div class="card">
+        <h4>Give accounts the narrowest access that works</h4>
+        <p>Assign a default port to anyone who only needs one device &mdash; it also means a dropped or deleted port disconnects them instead of ever exposing the wider picker menu. Reach for <code>read-only</code> for anyone who should watch but never type.</p>
+      </div>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Symptom</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>Port "X" is already in use.</code></td>
+              <td>That port is set to <code>exclusive</code> and someone else already holds it. Wait for them, disconnect them from the Sessions tab, or switch the port to a shared mode.</td>
+            </tr>
+            <tr>
+              <td><code>Your assigned serial port no longer exists.</code></td>
+              <td>An admin deleted the port this user was assigned to. Assign a different one from the Users tab.</td>
+            </tr>
+            <tr>
+              <td>"This session is read-only" / keystrokes don't appear</td>
+              <td>Either your account is set to <code>read-only</code>, or the port's access mode doesn't currently grant you write access (e.g. <code>shared-ro</code>, or <code>first-write</code> and someone else got there first).</td>
+            </tr>
+            <tr>
+              <td>Browser warns the connection isn't private</td>
+              <td>Expected &mdash; the certificate is self-signed. See <a href="#security">Security notes</a>.</td>
+            </tr>
+            <tr>
+              <td>Locked out of the web admin UI</td>
+              <td>There's no self-service reset. Someone with SSH access to the Pi (port 22) can delete <code>/opt/terminalserver/data/config.json</code>'s <code>web</code> section values or restore from a backup to re-trigger setup &mdash; back up that file once you've configured things.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="rule"></div>
+  <p>Serial Killer Terminal Server Handbook &middot; covers the web admin UI, SSH console access, and TFTP &mdash; for building and flashing the appliance image itself, see the project's README.</p>
+</footer>
