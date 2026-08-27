@@ -4,6 +4,10 @@ SSH-to-serial console server appliance, like a Digi PortServer/EZ. Supports
 multiple simultaneous users and multiple serial ports, configured through a
 web GUI. Ships as a bootable Raspberry Pi OS image.
 
+This README covers building, flashing, and first boot. For day-to-day
+administration and usage — the web admin UI, SSH console access, access
+modes, TFTP — see [HANDBOOK.html](HANDBOOK.html).
+
 ## What's on the image
 
 - **SSH server** (default port `2222`) — each user logs in over SSH and is
