@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Serial Killer Terminal Server</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Setup screen: shown once, before any admin password exists -->
+  <div class="auth-screen" id="setupScreen">
+    <form class="auth-card" id="setupForm">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Set up Serial Killer Terminal Server</h1>
+      <p class="hint">Create the administrator account used to manage this console server.</p>
+      <label>Admin username</label>
+      <input type="text" id="setupUsername" value="admin" required />
+      <label>Admin password <span class="hint">(min 8 characters)</span></label>
+      <input type="password" id="setupPassword" minlength="8" required />
+      <div class="auth-error" id="setupError"></div>
+      <button type="submit" class="primary">Create Admin Account</button>
+    </form>
+  </div>
+
+  <!-- Login screen -->
+  <div class="auth-screen" id="loginScreen">
+    <form class="auth-card" id="loginForm">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Serial Killer Terminal Server</h1>
+      <label>Username</label>
+      <input type="text" id="loginUsername" required />
+      <label>Password</label>
+      <input type="password" id="loginPassword" required />
+      <div class="auth-error" id="loginError"></div>
+      <button type="submit" class="primary">Sign In</button>
+    </form>
+  </div>
+
+  <!-- Forced password change: shown after logging in with the default password -->
+  <div class="auth-screen" id="forceChangeScreen">
+    <form class="auth-card" id="forceChangeForm">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Change the default password</h1>
+      <p class="hint">This account is still using the default password. Choose a new one to continue.</p>
+      <label>New password <span class="hint">(min 8 characters)</span></label>
+      <input type="password" id="forceChangePassword" minlength="8" required />
+      <div class="auth-error" id="forceChangeError"></div>
+      <button type="submit" class="primary">Set Password &amp; Continue</button>
+    </form>
+  </div>
+
+  <!-- Main app -->
+  <div class="app" id="appRoot">
+    <div class="titlebar">
+      <img class="titlebar-logo" src="assets/logo-small.png" alt="" />
+      <div class="titlebar-title">Serial Killer Terminal Server</div>
+      <div class="status-pill" id="statusPill">
+        <span class="dot"></span>
+        <span id="statusText">Stopped</span>
+      </div>
+      <button id="toggleServerBtn" class="primary">Start Server</button>
+      <button id="logoutBtn" class="secondary">Sign Out</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="server">Server</button>
+      <button class="tab-btn" data-tab="ports">Serial Ports</button>
+      <button class="tab-btn" data-tab="tftp">TFTP</button>
+      <button class="tab-btn" data-tab="users">Users</button>
+      <button class="tab-btn" data-tab="sessions">Sessions</button>
+      <button class="tab-btn" data-tab="log">Log</button>
+      <button class="tab-btn" data-tab="admin">Admin Account</button>
+    </div>
+
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="panel">
+        <h2>System</h2>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <span class="stat-label">CPU</span>
+            <span class="stat-value" id="statCpu">&mdash;</span>
+            <div class="stat-bar"><div class="stat-bar-fill" id="statCpuBar"></div></div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Memory</span>
+            <span class="stat-value" id="statMem">&mdash;</span>
+            <div class="stat-bar"><div class="stat-bar-fill" id="statMemBar"></div></div>
+            <span class="stat-sub" id="statMemSub"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Disk</span>
+            <span class="stat-value" id="statDisk">&mdash;</span>
+            <div class="stat-bar"><div class="stat-bar-fill" id="statDiskBar"></div></div>
+            <span class="stat-sub" id="statDiskSub"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Connected Clients</span>
+            <span class="stat-value" id="statClients">&mdash;</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Clients per Port</h2>
+        <table class="data-table" id="clientsPerPortTable">
+          <thead><tr><th>Port</th><th>Connected</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" id="clientsPerPortEmpty">No one is connected right now.</p>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-server">
+      <div class="panel">
+        <h2>SSH Server Settings</h2>
+        <div class="field-row">
+          <label for="sshPort">Listen Port</label>
+          <input type="number" id="sshPort" min="1" max="65535" />
+        </div>
+        <div class="field-row">
+          <label for="allowMenu">Port picker menu</label>
+          <input type="checkbox" id="allowMenu" />
+          <span class="hint">Let users without an assigned port choose one after login</span>
+        </div>
+        <div class="field-row">
+          <label for="autoStart">Start automatically on boot</label>
+          <input type="checkbox" id="autoStart" />
+        </div>
+        <div class="field-row column">
+          <label for="banner">Login banner</label>
+          <textarea id="banner" rows="3"></textarea>
+        </div>
+        <div class="field-row">
+          <button id="saveServerSettingsBtn">Save Settings</button>
+        </div>
+        <div class="field-row column">
+          <label>Host key fingerprint</label>
+          <pre id="hostKeyFingerprint" class="code-block">loading...</pre>
+        </div>
+        <p class="hint">Changing the listen port requires stopping and starting the server.</p>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-ports">
+      <div class="panel">
+        <h2>Configured Serial Ports</h2>
+        <table class="data-table" id="portsTable">
+          <thead><tr><th>Label</th><th>Device</th><th>Baud</th><th>Data/Stop/Parity</th><th>Access</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button id="addPortBtn">+ Add Port</button>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-tftp">
+      <div class="panel">
+        <h2>TFTP Server</h2>
+        <div class="field-row">
+          <span>Status</span>
+          <span class="status-pill" id="tftpStatusPill">
+            <span class="dot"></span>
+            <span id="tftpStatusText">Stopped</span>
+          </span>
+          <button id="toggleTftpBtn" class="primary">Start Server</button>
+        </div>
+        <div class="field-row">
+          <label for="tftpPort">Listen Port</label>
+          <input type="number" id="tftpPort" min="1" max="65535" />
+        </div>
+        <div class="field-row">
+          <label for="tftpAllowUpload">Allow uploads</label>
+          <input type="checkbox" id="tftpAllowUpload" />
+          <span class="hint">Let clients write (WRQ) files into the TFTP root, not just read them</span>
+        </div>
+        <div class="field-row">
+          <label for="tftpAutoStart">Start automatically on boot</label>
+          <input type="checkbox" id="tftpAutoStart" />
+        </div>
+        <div class="field-row">
+          <button id="saveTftpSettingsBtn">Save Settings</button>
+        </div>
+        <div class="field-row column">
+          <label>Root directory</label>
+          <pre class="code-block" id="tftpRootDir">/opt/terminalserver/data/tftp</pre>
+        </div>
+        <p class="hint">Changing the listen port requires stopping and starting the server. The standard TFTP port (69) requires no extra privileges here — the service is granted that capability directly.</p>
+      </div>
+
+      <div class="panel">
+        <h2>TFTP Directory</h2>
+        <table class="data-table" id="tftpFilesTable">
+          <thead><tr><th>Name</th><th>Size</th><th>Modified</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" id="tftpFilesEmpty">No files yet.</p>
+        <input type="file" id="tftpUploadInput" hidden />
+        <button id="tftpUploadBtn">+ Upload File</button>
+        <div class="auth-error" id="tftpUploadMsg"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-users">
+      <div class="panel">
+        <h2>Users</h2>
+        <table class="data-table" id="usersTable">
+          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button id="addUserBtn">+ Add User</button>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-sessions">
+      <div class="panel">
+        <h2>Active Sessions</h2>
+        <table class="data-table" id="sessionsTable">
+          <thead><tr><th>User</th><th>Connected To</th><th>Since</th><th>Access</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-log">
+      <div class="panel">
+        <h2>Server Log</h2>
+        <pre class="code-block log-view" id="logView"></pre>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-admin">
+      <div class="panel">
+        <h2>Admin Account</h2>
+        <div class="field-row column">
+          <label for="newAdminPassword">New admin password</label>
+          <input type="password" id="newAdminPassword" minlength="8" />
+        </div>
+        <div class="field-row">
+          <button id="changeAdminPasswordBtn">Change Password</button>
+        </div>
+        <div class="auth-error" id="adminPasswordMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Port editor modal -->
+  <div class="modal-backdrop" id="portModalBackdrop">
+    <div class="modal">
+      <h3 id="portModalTitle">Add Serial Port</h3>
+      <div class="field-row column">
+        <label for="portLabel">Label</label>
+        <input type="text" id="portLabel" placeholder="e.g. Router Console" />
+      </div>
+      <div class="field-row column">
+        <label for="portPath">Device path</label>
+        <div class="inline-with-button">
+          <input type="text" id="portPath" list="systemPortsList" placeholder="/dev/ttyUSB0" />
+          <datalist id="systemPortsList"></datalist>
+          <button id="refreshSystemPortsBtn" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <label for="portBaud">Baud rate</label>
+        <select id="portBaud">
+          <option>1200</option><option>2400</option><option>4800</option><option>9600</option>
+          <option>19200</option><option>38400</option><option>57600</option><option>115200</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label for="portDataBits">Data bits</label>
+        <select id="portDataBits"><option>8</option><option>7</option><option>6</option><option>5</option></select>
+        <label for="portStopBits">Stop bits</label>
+        <select id="portStopBits"><option>1</option><option>2</option></select>
+        <label for="portParity">Parity</label>
+        <select id="portParity"><option>none</option><option>even</option><option>odd</option></select>
+      </div>
+      <div class="field-row">
+        <label for="portRtscts">Hardware flow control (RTS/CTS)</label>
+        <input type="checkbox" id="portRtscts" />
+      </div>
+      <div class="field-row column">
+        <label for="portAccess">Access mode</label>
+        <select id="portAccess">
+          <option value="exclusive">Exclusive (one user at a time)</option>
+          <option value="shared-rw">Shared — read/write (multiple users, all can type)</option>
+          <option value="first-write">Shared — first user read/write, rest read-only</option>
+          <option value="shared-ro">Shared — read-only (multiple users, view only)</option>
+        </select>
+      </div>
+      <input type="hidden" id="portId" />
+      <div class="modal-actions">
+        <button id="cancelPortBtn" class="secondary">Cancel</button>
+        <button id="savePortBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User editor modal -->
+  <div class="modal-backdrop" id="userModalBackdrop">
+    <div class="modal">
+      <h3 id="userModalTitle">Add User</h3>
+      <div class="field-row column">
+        <label for="userUsername">Username</label>
+        <input type="text" id="userUsername" />
+      </div>
+      <div class="field-row column">
+        <label for="userAuthMethod">Authentication method</label>
+        <select id="userAuthMethod">
+          <option value="password">Password only</option>
+          <option value="publickey">Public key only</option>
+          <option value="both">Password or public key</option>
+        </select>
+      </div>
+      <div class="field-row column" id="userPasswordRow">
+        <label for="userPassword">Password <span class="hint">(leave blank to keep existing)</span></label>
+        <input type="password" id="userPassword" />
+      </div>
+      <div class="field-row column" id="userPublicKeyRow">
+        <label for="userPublicKey">Authorized public key</label>
+        <textarea id="userPublicKey" rows="3" placeholder="ssh-ed25519 AAAA..."></textarea>
+      </div>
+      <div class="field-row column">
+        <label for="userPermission">Permission</label>
+        <select id="userPermission">
+          <option value="read-write">Read/write (can type on any port they connect to)</option>
+          <option value="read-only">Read-only (can view any port but never type)</option>
+        </select>
+      </div>
+      <div class="field-row column">
+        <label for="userDefaultPort">Default serial port</label>
+        <select id="userDefaultPort">
+          <option value="">(none — show port menu)</option>
+        </select>
+      </div>
+      <input type="hidden" id="userId" />
+      <div class="modal-actions">
+        <button id="cancelUserBtn" class="secondary">Cancel</button>
+        <button id="saveUserBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

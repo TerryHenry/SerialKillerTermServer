@@ -1,0 +1,18 @@
+[Unit]
+Description=Serial Killer Terminal Server (SSH-to-serial console server)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/terminalserver
+ExecStart=/usr/bin/node /opt/terminalserver/server.js
+Restart=on-failure
+RestartSec=3
+User=terminalserver
+Group=terminalserver
+Environment=TS_DATA_DIR=/opt/terminalserver/data
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
