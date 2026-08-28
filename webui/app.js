@@ -293,6 +293,37 @@ document.getElementById('changeAdminPasswordBtn').addEventListener('click', asyn
   }
 });
 
+// ---------- Backup / restore ----------
+document.getElementById('downloadBackupBtn').addEventListener('click', () => {
+  window.location.href = '/api/backup';
+});
+
+document.getElementById('restoreBtn').addEventListener('click', () => {
+  document.getElementById('restoreInput').click();
+});
+
+document.getElementById('restoreInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const msg = document.getElementById('restoreMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = '';
+  if (!confirm('This replaces all current settings, serial ports, and users with the contents of the backup file. Continue?')) {
+    return;
+  }
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await fetch('/api/restore', { method: 'POST', body: formData });
+    if (!res.ok) throw await apiError(res);
+    alert('Restore complete. Reloading.');
+    window.location.reload();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
 // ---------- Ports ----------
 async function loadPortsTable() {
   const ports = await api.get('/api/ports');

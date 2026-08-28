@@ -410,6 +410,8 @@
       <li><a href="#tab-tftp">TFTP</a></li>
       <li><a href="#tab-users">Users</a></li>
       <li><a href="#tab-sessions">Sessions &amp; Log</a></li>
+      <li><a href="#tab-admin">Admin Account</a></li>
+      <li><a href="#tab-about">About</a></li>
     </ul>
     <div class="group-label">Using it</div>
     <ul>
@@ -483,7 +485,7 @@
 
     <section id="tab-dashboard">
       <h2>Web Admin UI</h2>
-      <p class="lede">Eight tabs across the top of the admin UI. Here's what each one does.</p>
+      <p class="lede">Nine tabs across the top of the admin UI. Here's what each one does.</p>
 
       <h3>Dashboard</h3>
       <div class="card">
@@ -571,6 +573,29 @@
           <h4>Log</h4>
           <p>A live stream of connect/disconnect events and server activity, including the TFTP server. It persists &mdash; the last 2,000 lines are kept on disk, so reopening the tab or rebooting the Pi doesn't lose history the way an in-memory-only log would.</p>
         </div>
+      </div>
+    </section>
+
+    <section id="tab-admin">
+      <h3>Admin Account</h3>
+      <div class="card">
+        <p>Change the web UI admin password here at any time &mdash; independent of the forced first-login change covered earlier.</p>
+      </div>
+      <div class="card">
+        <h4>Backup &amp; Restore</h4>
+        <p><strong>Download Backup</strong> saves everything in the app's config &mdash; SSH/TFTP/web settings, serial ports, and every user, including password hashes and public keys &mdash; as a single JSON file. It does <em>not</em> include the SSH host key or the web UI's TLS certificate, so restoring never changes either of those.</p>
+        <p><strong>Restore from Backup</strong> replaces the <em>entire</em> current configuration with the contents of a chosen backup file, after a confirmation prompt &mdash; there's no partial or selective restore. The page reloads automatically once it's done.</p>
+      </div>
+      <div class="callout warn">
+        <span class="mark">Handle with care</span>
+        <p>A backup file contains password hashes and SSH public keys for every account on the appliance. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back the admin password too, to whatever it was when that backup was taken.</p>
+      </div>
+    </section>
+
+    <section id="tab-about">
+      <h3>About</h3>
+      <div class="card">
+        <p>Shows the app's identity and where to send feedback: written by Terry Henry, reachable at <a href="mailto:terry.alan.henry@gmail.com">terry.alan.henry@gmail.com</a> for comments and suggestions.</p>
       </div>
     </section>
 
