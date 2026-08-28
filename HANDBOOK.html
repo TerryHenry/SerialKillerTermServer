@@ -491,7 +491,7 @@
         <ul>
           <li><strong>CPU, Memory, Disk</strong> &mdash; each shown as a percentage with a bar that shifts from the accent color to amber at 70% and red at 90%, plus the raw used/total underneath for memory and disk.</li>
           <li><strong>Connected Clients</strong> &mdash; the current SSH session count across every port.</li>
-          <li><strong>Clients per Port</strong> &mdash; a breakdown of who's connected to what, useful for spotting a port someone's been sitting on.</li>
+          <li><strong>Serial Ports</strong> &mdash; every configured port, live: a <strong>Present</strong>/<strong>Missing</strong> status pill (whether its device file actually exists right now &mdash; the first place to look if an adapter drops out or a USB hub loses power) alongside how many clients are connected to it.</li>
         </ul>
       </div>
 
@@ -546,7 +546,7 @@
     <section id="tab-users">
       <h3>Users</h3>
       <div class="card">
-        <p>Each row is one SSH console account &mdash; unrelated to the web admin login.</p>
+        <p>Each row is one SSH console account &mdash; unrelated to the web admin login. Rows are sorted alphabetically by username.</p>
         <ul>
           <li><strong>Authentication method</strong> &mdash; password, an SSH public key, or either.</li>
           <li><strong>Permission</strong> &mdash; <span class="pill ok"><span class="dot"></span>Read/write</span> or <span class="pill mute"><span class="dot"></span>Read-only</span>. Explained together with port access modes below.</li>
