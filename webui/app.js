@@ -398,6 +398,7 @@ document.getElementById('savePortBtn').addEventListener('click', async () => {
 // ---------- Users ----------
 async function loadUsersTable() {
   const users = await api.get('/api/users');
+  users.sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: 'base' }));
   const ports = await api.get('/api/ports');
   const portById = Object.fromEntries(ports.map((p) => [p.id, p.label]));
   const tbody = document.querySelector('#usersTable tbody');
@@ -557,13 +558,21 @@ function renderStats(stats) {
 
   document.getElementById('statClients').textContent = stats.clientsConnected;
 
-  const tbody = document.querySelector('#clientsPerPortTable tbody');
-  const empty = document.getElementById('clientsPerPortEmpty');
+  const tbody = document.querySelector('#portStatusTable tbody');
+  const empty = document.getElementById('portStatusEmpty');
   tbody.innerHTML = '';
-  empty.style.display = stats.clientsPerPort.length ? 'none' : 'block';
-  for (const row of stats.clientsPerPort) {
+  empty.style.display = stats.ports.length ? 'none' : 'block';
+  for (const p of stats.ports) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${escapeHtml(row.label)}</td><td>${row.count}</td>`;
+    const statusPill = p.present
+      ? '<span class="status-pill inline running"><span class="dot"></span>Present</span>'
+      : '<span class="status-pill inline missing"><span class="dot"></span>Missing</span>';
+    tr.innerHTML = `
+      <td>${escapeHtml(p.label)}</td>
+      <td>${escapeHtml(p.path)}</td>
+      <td>${statusPill}</td>
+      <td>${p.clients}</td>
+    `;
     tbody.appendChild(tr);
   }
 }

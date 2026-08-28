@@ -132,6 +132,11 @@ body.app-mode {
 .status-pill.running .dot { background: var(--ok); }
 .status-pill.running { color: var(--ok); }
 
+.status-pill.missing .dot { background: var(--danger); }
+.status-pill.missing { color: var(--danger); }
+
+.status-pill.inline { display: inline-flex; }
+
 button {
   background: rgba(255,255,255,0.08);
   color: var(--text);
