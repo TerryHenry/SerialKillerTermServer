@@ -512,13 +512,18 @@
     <section id="tab-ports">
       <h3>Serial Ports</h3>
       <div class="card">
-        <p>Add one entry per physical serial line. <strong>Refresh</strong> next to the device-path field lists what the Pi currently sees plugged in (e.g. <code>/dev/ttyUSB0</code>), so you're not guessing at paths.</p>
+        <p>Add one entry per physical serial line. <strong>Refresh</strong> next to the device-path field lists what the Pi currently sees plugged in, so you're not guessing at paths.</p>
         <ul>
           <li><strong>Label</strong> &mdash; whatever the device actually is: "Core Switch Console," "Lab Router 3."</li>
           <li><strong>Device path, baud, data/stop bits, parity, RTS/CTS</strong> &mdash; standard serial parameters, matched to the equipment on the other end.</li>
           <li><strong>Access mode</strong> &mdash; who can connect at once, and who can type. Covered in full in <a href="#access-modes">Access modes &amp; permissions</a>.</li>
         </ul>
         <p>Ports are referenced by ID internally, so renaming a label later doesn't break any user's assignment to it.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="mark">Use stable paths</span>
+        <p><code>/dev/ttyUSB0</code>-style names are assigned by detection order at boot or plug-in time &mdash; they aren't guaranteed to stay the same across a reboot or a replug, which can silently point a port at the wrong physical device. <strong>Refresh</strong> lists <code>/dev/serial/by-id/&hellip;</code> paths instead whenever they're available (derived from each device's own USB descriptor via udev, already set up on the Pi with no configuration needed) &mdash; always prefer those over a raw <code>ttyUSBx</code> path. If you have two identical adapters that don't expose a unique serial number, their <code>by-id</code> names may collide; in that case <code>/dev/serial/by-path/&hellip;</code> (stable by physical USB port instead of device identity) is the fallback, as long as you always plug that adapter into the same physical port.</p>
       </div>
     </section>
 
