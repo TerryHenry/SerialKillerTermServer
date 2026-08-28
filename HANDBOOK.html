@@ -512,7 +512,7 @@
     <section id="tab-ports">
       <h3>Serial Ports</h3>
       <div class="card">
-        <p>Add one entry per physical serial line. <strong>Refresh</strong> next to the device-path field lists what the Pi currently sees plugged in, so you're not guessing at paths.</p>
+        <p>Add one entry per physical serial line, sorted alphabetically by label. <strong>Refresh</strong> next to the device-path field lists what the Pi currently sees plugged in, so you're not guessing at paths &mdash; devices already assigned to another configured port are left off that list, so you can't accidentally point two ports at the same device.</p>
         <ul>
           <li><strong>Label</strong> &mdash; whatever the device actually is: "Core Switch Console," "Lab Router 3."</li>
           <li><strong>Device path, baud, data/stop bits, parity, RTS/CTS</strong> &mdash; standard serial parameters, matched to the equipment on the other end.</li>

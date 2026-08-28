@@ -296,6 +296,7 @@ document.getElementById('changeAdminPasswordBtn').addEventListener('click', asyn
 // ---------- Ports ----------
 async function loadPortsTable() {
   const ports = await api.get('/api/ports');
+  ports.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
   const tbody = document.querySelector('#portsTable tbody');
   tbody.innerHTML = '';
   for (const p of ports) {
@@ -336,11 +337,23 @@ function accessLabel(access) {
   return 'Exclusive';
 }
 
+let editingPortPath = null;
+
 async function refreshSystemPortsDatalist() {
-  const ports = await api.get('/api/ports/system');
+  const [systemPorts, configuredPorts] = await Promise.all([
+    api.get('/api/ports/system'),
+    api.get('/api/ports')
+  ]);
+  // Don't offer a device path that's already assigned to a different configured
+  // port — but keep showing the path of the port currently being edited, since
+  // that's still its own path, not a conflict.
+  const assignedPaths = new Set(
+    configuredPorts.filter((p) => p.path !== editingPortPath).map((p) => p.path)
+  );
   const list = document.getElementById('systemPortsList');
   list.innerHTML = '';
-  for (const p of ports) {
+  for (const p of systemPorts) {
+    if (assignedPaths.has(p.path)) continue;
     const opt = document.createElement('option');
     opt.value = p.path;
     opt.label = p.manufacturer ? `${p.path} (${p.manufacturer})` : p.path;
@@ -359,6 +372,7 @@ function openPortModal(port) {
   document.getElementById('portParity').value = port?.parity || 'none';
   document.getElementById('portRtscts').checked = !!port?.rtscts;
   document.getElementById('portAccess').value = port?.access || 'exclusive';
+  editingPortPath = port?.path || null;
   refreshSystemPortsDatalist();
   document.getElementById('portModalBackdrop').classList.add('open');
 }
