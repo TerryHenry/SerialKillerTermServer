@@ -4,8 +4,8 @@
   --border: #38393e;
   --text: #e6e6e6;
   --text-dim: #9a9ca1;
-  --accent: #4f8cff;
-  --accent-hover: #6a9dff;
+  --accent: #a8621f;
+  --accent-hover: #c17d35;
   --danger: #e5534b;
   --ok: #3fb950;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -238,6 +238,34 @@ button.danger { color: var(--danger); border-color: rgba(229,83,75,0.4); }
 .field-row textarea { resize: vertical; font-family: ui-monospace, monospace; }
 
 .hint { color: var(--text-dim); font-size: 11.5px; }
+
+.field-error {
+  color: var(--danger);
+  font-size: 11.5px;
+  min-height: 15px;
+  display: block;
+}
+
+input.invalid, textarea.invalid {
+  border-color: var(--danger) !important;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pill.ok { background: rgba(63, 185, 80, 0.14); color: var(--ok); }
+.pill.mute { background: rgba(255, 255, 255, 0.06); color: var(--text-dim); }
+.pill.accent { background: rgba(168, 98, 31, 0.18); color: var(--accent-hover); }
 
 code {
   font-family: ui-monospace, "SF Mono", monospace;

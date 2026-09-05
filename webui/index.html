@@ -231,9 +231,10 @@
 
     <div class="tab-content" id="tab-admin">
       <div class="panel">
-        <h2>Admin Account</h2>
+        <h2>My Account</h2>
+        <p class="hint">Signed in as <strong id="myUsername">&mdash;</strong>.</p>
         <div class="field-row column">
-          <label for="newAdminPassword">New admin password</label>
+          <label for="newAdminPassword">New password</label>
           <input type="password" id="newAdminPassword" minlength="8" />
         </div>
         <div class="field-row">
@@ -243,8 +244,22 @@
       </div>
 
       <div class="panel">
+        <h2>Admin Accounts</h2>
+        <table class="data-table" id="adminsTable">
+          <thead><tr><th>Username</th><th>Status</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button id="addAdminBtn">+ Add Admin</button>
+      </div>
+
+      <div class="panel">
         <h2>Backup &amp; Restore</h2>
-        <p class="hint">Covers SSH/TFTP/web settings, serial ports, and users (including password hashes and public keys) &mdash; not the SSH host key or TLS certificate. Store downloaded backups somewhere secure; they contain credential data.</p>
+        <p class="hint">Covers SSH/TFTP/web settings, serial ports, users, and admin accounts (including password hashes and public keys). Store downloaded backups somewhere secure; they contain credential data.</p>
+        <div class="field-row">
+          <label for="includeHostKeyOnBackup">Include SSH host key</label>
+          <input type="checkbox" id="includeHostKeyOnBackup" />
+          <span class="hint">Off by default. Lets a restore fully reproduce this device, including the same host key fingerprint &mdash; but the file will contain an SSH private key.</span>
+        </div>
         <div class="field-row">
           <button id="downloadBackupBtn">Download Backup</button>
         </div>
@@ -274,6 +289,7 @@
       <div class="field-row column">
         <label for="portLabel">Label</label>
         <input type="text" id="portLabel" placeholder="e.g. Router Console" />
+        <span class="field-error" id="portLabelError"></span>
       </div>
       <div class="field-row column">
         <label for="portPath">Device path</label>
@@ -282,6 +298,7 @@
           <datalist id="systemPortsList"></datalist>
           <button id="refreshSystemPortsBtn" type="button">Refresh</button>
         </div>
+        <span class="field-error" id="portPathError"></span>
         <span class="hint">Prefer the <code>/dev/serial/by-id/...</code> paths shown here when available &mdash; unlike <code>/dev/ttyUSB0</code>, they don't change across a reboot or replug. Devices already assigned to another port are left off the list.</span>
       </div>
       <div class="field-row">
@@ -327,6 +344,7 @@
       <div class="field-row column">
         <label for="userUsername">Username</label>
         <input type="text" id="userUsername" />
+        <span class="field-error" id="userUsernameError"></span>
       </div>
       <div class="field-row column">
         <label for="userAuthMethod">Authentication method</label>
@@ -339,10 +357,12 @@
       <div class="field-row column" id="userPasswordRow">
         <label for="userPassword">Password <span class="hint">(leave blank to keep existing)</span></label>
         <input type="password" id="userPassword" />
+        <span class="field-error" id="userPasswordError"></span>
       </div>
       <div class="field-row column" id="userPublicKeyRow">
         <label for="userPublicKey">Authorized public key</label>
         <textarea id="userPublicKey" rows="3" placeholder="ssh-ed25519 AAAA..."></textarea>
+        <span class="field-error" id="userPublicKeyError"></span>
       </div>
       <div class="field-row column">
         <label for="userPermission">Permission</label>
@@ -361,6 +381,28 @@
       <div class="modal-actions">
         <button id="cancelUserBtn" class="secondary">Cancel</button>
         <button id="saveUserBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin account editor modal -->
+  <div class="modal-backdrop" id="adminModalBackdrop">
+    <div class="modal">
+      <h3 id="adminModalTitle">Add Admin</h3>
+      <div class="field-row column">
+        <label for="adminUsername">Username</label>
+        <input type="text" id="adminUsername" />
+        <span class="field-error" id="adminUsernameError"></span>
+      </div>
+      <div class="field-row column">
+        <label for="adminPassword">Password <span class="hint" id="adminPasswordHint">(leave blank to keep existing)</span></label>
+        <input type="password" id="adminPassword" minlength="8" />
+        <span class="field-error" id="adminPasswordError"></span>
+      </div>
+      <input type="hidden" id="adminId" />
+      <div class="modal-actions">
+        <button id="cancelAdminBtn" class="secondary">Cancel</button>
+        <button id="saveAdminBtn" class="primary">Save</button>
       </div>
     </div>
   </div>

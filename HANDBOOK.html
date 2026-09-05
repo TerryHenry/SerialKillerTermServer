@@ -572,6 +572,7 @@
         <div class="card">
           <h4>Log</h4>
           <p>A live stream of connect/disconnect events and server activity, including the TFTP server. It persists &mdash; the last 2,000 lines are kept on disk, so reopening the tab or rebooting the Pi doesn't lose history the way an in-memory-only log would.</p>
+          <p>Admin actions are tagged <code>[AUDIT]</code> right in this same stream &mdash; who changed a setting, added or deleted a port/user/admin account, restored a backup, and so on &mdash; so accountability lives alongside the rest of the activity instead of a separate place you'd have to remember to check.</p>
         </div>
       </div>
     </section>
@@ -579,16 +580,26 @@
     <section id="tab-admin">
       <h3>Admin Account</h3>
       <div class="card">
-        <p>Change the web UI admin password here at any time &mdash; independent of the forced first-login change covered earlier.</p>
+        <h4>My Account</h4>
+        <p>Change your own password here at any time &mdash; independent of the forced first-login change covered earlier.</p>
+      </div>
+      <div class="card">
+        <h4>Admin Accounts</h4>
+        <p>The web UI supports more than one administrator. Add one per person rather than sharing a single login &mdash; combined with the audit trail in the Log tab, that means every change is attributable to whoever actually made it.</p>
+        <ul>
+          <li>A new admin you create sets their own password immediately &mdash; there's no shared default to force-rotate, unlike the original seeded account.</li>
+          <li>You can't delete the account you're currently logged in as, and the system won't let the last remaining admin account be deleted at all &mdash; there's always a way back in.</li>
+        </ul>
       </div>
       <div class="card">
         <h4>Backup &amp; Restore</h4>
-        <p><strong>Download Backup</strong> saves everything in the app's config &mdash; SSH/TFTP/web settings, serial ports, and every user, including password hashes and public keys &mdash; as a single JSON file. It does <em>not</em> include the SSH host key or the web UI's TLS certificate, so restoring never changes either of those.</p>
-        <p><strong>Restore from Backup</strong> replaces the <em>entire</em> current configuration with the contents of a chosen backup file, after a confirmation prompt &mdash; there's no partial or selective restore. The page reloads automatically once it's done.</p>
+        <p><strong>Download Backup</strong> saves everything in the app's config &mdash; SSH/TFTP/web settings, serial ports, users, and admin accounts, including password hashes and public keys &mdash; as a single JSON file.</p>
+        <p><strong>Include SSH host key</strong> (off by default) additionally embeds the Pi's SSH private host key in the backup. With it, restoring reproduces this device exactly, including the same host-key fingerprint, so existing users don't get a "host key changed" warning after a re-flash or SD card recovery. Without it, restoring still works fine, but the Pi gets a fresh host key identity.</p>
+        <p><strong>Restore from Backup</strong> replaces the <em>entire</em> current configuration with the contents of a chosen backup file, after a confirmation prompt &mdash; there's no partial or selective restore. The page reloads automatically once it's done; a restored host key takes effect after the service is restarted.</p>
       </div>
       <div class="callout warn">
         <span class="mark">Handle with care</span>
-        <p>A backup file contains password hashes and SSH public keys for every account on the appliance. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back the admin password too, to whatever it was when that backup was taken.</p>
+        <p>A backup file contains password hashes and SSH public keys for every account on the appliance &mdash; and, if you opted in, an SSH private key. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back every admin's password too, to whatever it was when that backup was taken.</p>
       </div>
     </section>
 
@@ -675,6 +686,10 @@ tftp terminalserver.local
       <div class="card">
         <h4>Give accounts the narrowest access that works</h4>
         <p>Assign a default port to anyone who only needs one device &mdash; it also means a dropped or deleted port disconnects them instead of ever exposing the wider picker menu. Reach for <code>read-only</code> for anyone who should watch but never type.</p>
+      </div>
+      <div class="card">
+        <h4>The web login locks out after repeated failures</h4>
+        <p>Five failed attempts for a given username from a given address lock that pair out for five minutes &mdash; even a subsequently-correct password is rejected until the lockout clears. Basic brute-force protection, tracked in memory only, so it resets on a service restart.</p>
       </div>
     </section>
 

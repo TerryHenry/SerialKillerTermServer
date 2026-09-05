@@ -34,6 +34,18 @@ async function apiError(res) {
 function show(el) { el.classList.add('active'); }
 function hide(el) { el.classList.remove('active'); }
 
+// Inline field validation, shared by the Port/User/Admin editor modals: fieldId is the
+// input's own id, and it must have a sibling `<span class="field-error" id="{fieldId}Error">`.
+function setFieldError(fieldId, message) {
+  const errorEl = document.getElementById(`${fieldId}Error`);
+  const inputEl = document.getElementById(fieldId);
+  if (errorEl) errorEl.textContent = message;
+  if (inputEl) inputEl.classList.toggle('invalid', !!message);
+}
+function clearFieldError(fieldId) {
+  setFieldError(fieldId, '');
+}
+
 const setupScreen = document.getElementById('setupScreen');
 const loginScreen = document.getElementById('loginScreen');
 const forceChangeScreen = document.getElementById('forceChangeScreen');
@@ -293,9 +305,109 @@ document.getElementById('changeAdminPasswordBtn').addEventListener('click', asyn
   }
 });
 
+// ---------- Admin accounts ----------
+async function loadMyUsername() {
+  const session = await api.get('/api/session');
+  document.getElementById('myUsername').textContent = session.username || '';
+}
+
+async function loadAdminsTable() {
+  const admins = await api.get('/api/admins');
+  admins.sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: 'base' }));
+  const tbody = document.querySelector('#adminsTable tbody');
+  tbody.innerHTML = '';
+  for (const a of admins) {
+    const tr = document.createElement('tr');
+    const statusPill = a.mustChangePassword
+      ? '<span class="pill mute"><span class="dot"></span>Must change password</span>'
+      : '<span class="pill ok"><span class="dot"></span>Active</span>';
+    tr.innerHTML = `
+      <td>${escapeHtml(a.username)}${a.isSelf ? ' <span class="hint">(you)</span>' : ''}</td>
+      <td>${statusPill}</td>
+      <td></td>
+    `;
+    const actionsCell = tr.lastElementChild;
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => openAdminModal(a));
+    actionsCell.appendChild(editBtn);
+    if (!a.isSelf) {
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Delete';
+      delBtn.className = 'danger';
+      delBtn.style.marginLeft = '6px';
+      delBtn.addEventListener('click', async () => {
+        if (confirm(`Delete admin account "${a.username}"?`)) {
+          try {
+            await api.del(`/api/admins/${a.id}`);
+            await loadAdminsTable();
+          } catch (err) {
+            alert(err.message);
+          }
+        }
+      });
+      actionsCell.appendChild(delBtn);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+function openAdminModal(admin) {
+  document.getElementById('adminModalTitle').textContent = admin ? 'Edit Admin' : 'Add Admin';
+  document.getElementById('adminId').value = admin?.id || '';
+  document.getElementById('adminUsername').value = admin?.username || '';
+  document.getElementById('adminPassword').value = '';
+  document.getElementById('adminPasswordHint').style.display = admin ? 'inline' : 'none';
+  clearFieldError('adminUsername');
+  clearFieldError('adminPassword');
+  document.getElementById('adminModalBackdrop').classList.add('open');
+}
+
+function closeAdminModal() {
+  document.getElementById('adminModalBackdrop').classList.remove('open');
+}
+
+document.getElementById('addAdminBtn').addEventListener('click', () => openAdminModal(null));
+document.getElementById('cancelAdminBtn').addEventListener('click', closeAdminModal);
+document.getElementById('adminUsername').addEventListener('input', () => clearFieldError('adminUsername'));
+document.getElementById('adminPassword').addEventListener('input', () => clearFieldError('adminPassword'));
+
+document.getElementById('saveAdminBtn').addEventListener('click', async () => {
+  const id = document.getElementById('adminId').value;
+  const username = document.getElementById('adminUsername').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  let valid = true;
+  if (!username) {
+    setFieldError('adminUsername', 'Username is required.');
+    valid = false;
+  }
+  if (!id && !password) {
+    setFieldError('adminPassword', 'A password is required for a new admin.');
+    valid = false;
+  }
+  if (password && password.length < 8) {
+    setFieldError('adminPassword', 'Password must be at least 8 characters.');
+    valid = false;
+  }
+  if (!valid) return;
+  try {
+    if (id) {
+      await api.post(`/api/admins/${id}`, { username, password: password || undefined });
+    } else {
+      await api.post('/api/admins', { username, password });
+    }
+    closeAdminModal();
+    await loadAdminsTable();
+    await loadMyUsername();
+  } catch (err) {
+    setFieldError('adminUsername', err.message);
+  }
+});
+
 // ---------- Backup / restore ----------
 document.getElementById('downloadBackupBtn').addEventListener('click', () => {
-  window.location.href = '/api/backup';
+  const includeHostKey = document.getElementById('includeHostKeyOnBackup').checked;
+  window.location.href = `/api/backup${includeHostKey ? '?includeHostKey=1' : ''}`;
 });
 
 document.getElementById('restoreBtn').addEventListener('click', () => {
@@ -317,7 +429,12 @@ document.getElementById('restoreInput').addEventListener('change', async (e) => 
   try {
     const res = await fetch('/api/restore', { method: 'POST', body: formData });
     if (!res.ok) throw await apiError(res);
-    alert('Restore complete. Reloading.');
+    const result = await res.json();
+    alert(
+      result.hostKeyRestored
+        ? 'Restore complete, including the SSH host key (takes effect after the service restarts). Reloading.'
+        : 'Restore complete. Reloading.'
+    );
     window.location.reload();
   } catch (err) {
     msg.textContent = err.message;
@@ -337,7 +454,7 @@ async function loadPortsTable() {
       <td>${escapeHtml(p.path)}</td>
       <td>${p.baudRate}</td>
       <td>${p.dataBits}/${p.stopBits}/${p.parity}</td>
-      <td>${accessLabel(p.access)}</td>
+      <td>${accessPill(p.access)}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
@@ -366,6 +483,16 @@ function accessLabel(access) {
   if (access === 'first-write') return 'Shared (first user read/write)';
   if (access === 'shared-ro') return 'Shared (read-only)';
   return 'Exclusive';
+}
+
+function accessPill(access) {
+  const cls = access && access !== 'exclusive' ? 'accent' : 'mute';
+  return `<span class="pill ${cls}"><span class="dot"></span>${accessLabel(access)}</span>`;
+}
+
+function permissionPill(permission) {
+  const readOnly = permission === 'read-only';
+  return `<span class="pill ${readOnly ? 'mute' : 'ok'}"><span class="dot"></span>${readOnly ? 'Read-only' : 'Read/write'}</span>`;
 }
 
 let editingPortPath = null;
@@ -404,6 +531,8 @@ function openPortModal(port) {
   document.getElementById('portRtscts').checked = !!port?.rtscts;
   document.getElementById('portAccess').value = port?.access || 'exclusive';
   editingPortPath = port?.path || null;
+  clearFieldError('portLabel');
+  clearFieldError('portPath');
   refreshSystemPortsDatalist();
   document.getElementById('portModalBackdrop').classList.add('open');
 }
@@ -416,13 +545,22 @@ document.getElementById('addPortBtn').addEventListener('click', () => openPortMo
 document.getElementById('cancelPortBtn').addEventListener('click', closePortModal);
 document.getElementById('refreshSystemPortsBtn').addEventListener('click', refreshSystemPortsDatalist);
 
+document.getElementById('portLabel').addEventListener('input', () => clearFieldError('portLabel'));
+document.getElementById('portPath').addEventListener('input', () => clearFieldError('portPath'));
+
 document.getElementById('savePortBtn').addEventListener('click', async () => {
   const label = document.getElementById('portLabel').value.trim();
   const devPath = document.getElementById('portPath').value.trim();
-  if (!label || !devPath) {
-    alert('Label and device path are required.');
-    return;
+  let valid = true;
+  if (!label) {
+    setFieldError('portLabel', 'A label is required.');
+    valid = false;
   }
+  if (!devPath) {
+    setFieldError('portPath', 'A device path is required.');
+    valid = false;
+  }
+  if (!valid) return;
   const port = {
     id: document.getElementById('portId').value || undefined,
     label,
@@ -453,7 +591,7 @@ async function loadUsersTable() {
     tr.innerHTML = `
       <td>${escapeHtml(u.username)}</td>
       <td>${escapeHtml(u.authMethod)}</td>
-      <td>${u.permission === 'read-only' ? 'Read-only' : 'Read/write'}</td>
+      <td>${permissionPill(u.permission)}</td>
       <td>${u.defaultPortId ? escapeHtml(portById[u.defaultPortId] || '(deleted port)') : '<span class="hint">port menu</span>'}</td>
       <td></td>
     `;
@@ -507,6 +645,9 @@ async function openUserModal(user) {
   document.getElementById('userPermission').value = user?.permission || 'read-write';
   await refreshUserDefaultPortOptions(user?.defaultPortId);
   updateAuthMethodVisibility();
+  clearFieldError('userUsername');
+  clearFieldError('userPassword');
+  clearFieldError('userPublicKey');
   document.getElementById('userModalBackdrop').classList.add('open');
 }
 
@@ -516,28 +657,31 @@ function closeUserModal() {
 
 document.getElementById('addUserBtn').addEventListener('click', () => openUserModal(null));
 document.getElementById('cancelUserBtn').addEventListener('click', closeUserModal);
+document.getElementById('userUsername').addEventListener('input', () => clearFieldError('userUsername'));
+document.getElementById('userPassword').addEventListener('input', () => clearFieldError('userPassword'));
+document.getElementById('userPublicKey').addEventListener('input', () => clearFieldError('userPublicKey'));
 
 document.getElementById('saveUserBtn').addEventListener('click', async () => {
   const username = document.getElementById('userUsername').value.trim();
-  if (!username) {
-    alert('Username is required.');
-    return;
-  }
   const authMethod = document.getElementById('userAuthMethod').value;
   const password = document.getElementById('userPassword').value;
   const publicKey = document.getElementById('userPublicKey').value.trim();
+  const existingId = document.getElementById('userId').value;
 
-  if (authMethod !== 'publickey' && !password) {
-    const existingId = document.getElementById('userId').value;
-    if (!existingId) {
-      alert('A password is required for new users using password authentication.');
-      return;
-    }
+  let valid = true;
+  if (!username) {
+    setFieldError('userUsername', 'Username is required.');
+    valid = false;
+  }
+  if (authMethod !== 'publickey' && !password && !existingId) {
+    setFieldError('userPassword', 'A password is required for a new user using password authentication.');
+    valid = false;
   }
   if (authMethod !== 'password' && !publicKey) {
-    alert('A public key is required for public-key authentication.');
-    return;
+    setFieldError('userPublicKey', 'A public key is required for public-key authentication.');
+    valid = false;
   }
+  if (!valid) return;
 
   const user = {
     id: document.getElementById('userId').value || undefined,
@@ -564,7 +708,7 @@ function renderSessions(sessions) {
       <td>${escapeHtml(s.username)}</td>
       <td>${s.portLabel ? escapeHtml(s.portLabel) : '<span class="hint">at menu</span>'}</td>
       <td>${since}</td>
-      <td>${s.permission === 'read-only' ? 'Read-only' : 'Read/write'}</td>
+      <td>${permissionPill(s.permission)}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
@@ -663,6 +807,8 @@ async function initApp() {
   await loadTftpFiles();
   await loadPortsTable();
   await loadUsersTable();
+  await loadMyUsername();
+  await loadAdminsTable();
   renderSessions(await api.get('/api/sessions'));
   renderStats(await api.get('/api/stats'));
   await loadLogHistory();
