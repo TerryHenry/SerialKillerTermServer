@@ -33,9 +33,18 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 - **Web admin UI** (default port `8443`, HTTPS with a self-signed
   certificate generated on first run) — configure serial ports, users
   (password and/or SSH public-key auth), SSH server settings, TFTP, and view
-  live sessions/logs.
+  live sessions/logs. Supports multiple admin accounts (not just one shared
+  login), and login attempts are throttled after repeated failures.
 - **Dashboard tab** — live CPU, memory, and disk usage, total connected
-  clients, and a breakdown of how many clients are on each port.
+  clients, and a live status (present/missing) and client count for every
+  configured serial port.
+- **Audit log** — admin actions (settings changes, port/user/admin
+  create/delete, backup restores, TFTP file changes) are recorded, tagged
+  with who did it, right alongside the rest of the server's activity log.
+- **Backup &amp; restore** — export the full config (ports, users, admin
+  accounts, settings) as a single file and restore it later, optionally
+  including the SSH host key so a restore reproduces the same host-key
+  fingerprint instead of minting a new device identity.
 - **TFTP server** (default port `69`, off by default) — start/stop from the
   TFTP tab in the admin UI. Serves and accepts files (if uploads are
   enabled) from `/opt/terminalserver/data/tftp`, e.g. for pushing firmware
