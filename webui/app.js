@@ -798,6 +798,38 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ---------- Version / updates ----------
+async function loadVersion() {
+  const { version } = await api.get('/api/version');
+  document.getElementById('aboutVersion').textContent = version;
+}
+
+document.getElementById('checkUpdateBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('updateStatus');
+  const btn = document.getElementById('checkUpdateBtn');
+  btn.disabled = true;
+  statusEl.style.color = 'var(--text-dim)';
+  statusEl.textContent = 'Checking…';
+  try {
+    const result = await api.get('/api/check-update');
+    if (!result.found) {
+      statusEl.style.color = 'var(--text-dim)';
+      statusEl.textContent = 'No releases found yet.';
+    } else if (result.upToDate) {
+      statusEl.style.color = 'var(--ok)';
+      statusEl.textContent = `Up to date (${result.currentVersion}).`;
+    } else {
+      statusEl.style.color = 'var(--accent-hover)';
+      statusEl.innerHTML = `Update available: <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener">${escapeHtml(result.latestVersion)}</a> (you're on ${escapeHtml(result.currentVersion)}).`;
+    }
+  } catch (err) {
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ---------- Init ----------
 async function initApp() {
   const status = await api.get('/api/server/status');
@@ -809,6 +841,7 @@ async function initApp() {
   await loadUsersTable();
   await loadMyUsername();
   await loadAdminsTable();
+  await loadVersion();
   renderSessions(await api.get('/api/sessions'));
   renderStats(await api.get('/api/stats'));
   await loadLogHistory();
