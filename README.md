@@ -63,20 +63,8 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   with `passwd` once logged in — unlike the web UI's admin password, this
   one isn't force-rotated for you.
 
-## Building the image
 
-Run on macOS, from this directory:
-
-```bash
-./build-image.sh
-```
-
-The first run downloads Raspberry Pi OS Lite (arm64), ~500MB. Subsequent
-runs reuse the cached copy and just re-inject the app, so they're fast. This
-script only mounts the FAT32 boot partition (`hdiutil`/`diskutil`) — it never
-touches the Linux root filesystem from macOS.
-
-Output:
+Images:
 - `build/terminalserver-pi.img` — flashable image
 - `build/terminalserver-pi.img.gz` — same, gzip-compressed for transfer
 
