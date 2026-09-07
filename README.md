@@ -1,8 +1,13 @@
 # Serial Killer Terminal Server
 
-SSH-to-serial console server appliance, like a Digi PortServer/EZ. Supports
+SSH-to-serial console server appliance. Supports
 multiple simultaneous users and multiple serial ports, configured through a
 web GUI. Ships as a bootable Raspberry Pi OS image.
+
+This is the perfect solution for a rack of equipment in a lab or training 
+class that you can access remotely via SSH. Device password recovery or 
+misconfiguration no longer requires the administrator to be physically 
+onsite with a serial console connection.
 
 This README covers building, flashing, and first boot. Already flashed and
 just want to get connected? See [QUICKSTART.html](QUICKSTART.html). For the
