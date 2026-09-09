@@ -17,11 +17,6 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   A user with a dedicated (assigned) port is never shown the port menu: if
   that port doesn't exist, can't be opened, or drops mid-session, they're
   disconnected outright rather than falling back to a picker.
-- **Power control** (optional, per port) — wire a Tuya/SmartLife smart plug
-  to a serial port and anyone connected can power it off/on/cycle with
-  `Ctrl+P`, gated by the same write-access permission as typing. Controlled
-  entirely over the local network via the plug's local key, not Tuya's
-  cloud API, so it doesn't depend on internet access to work.
 - Each serial port has an **access mode**: `exclusive` (one session at a
   time, the default), `shared-rw` (multiple sessions, all can type — input
   from any of them goes to the port and everyone sees all output),

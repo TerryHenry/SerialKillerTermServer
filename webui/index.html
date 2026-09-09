@@ -165,7 +165,7 @@
       <div class="panel">
         <h2>Configured Serial Ports</h2>
         <table class="data-table" id="portsTable">
-          <thead><tr><th>Label</th><th>Device</th><th>Baud</th><th>Data/Stop/Parity</th><th>Access</th><th>Power</th><th></th></tr></thead>
+          <thead><tr><th>Label</th><th>Device</th><th>Baud</th><th>Data/Stop/Parity</th><th>Access</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <button id="addPortBtn">+ Add Port</button>
@@ -331,33 +331,6 @@
           <option value="first-write">Shared — first user read/write, rest read-only</option>
           <option value="shared-ro">Shared — read-only (multiple users, view only)</option>
         </select>
-      </div>
-      <div class="field-row column">
-        <label>Power control <span class="hint">(optional &mdash; a Tuya/SmartLife plug users can control with Ctrl+P from an SSH session)</span></label>
-      </div>
-      <div class="field-row">
-        <label for="portPlugId">Device ID</label>
-        <input type="text" id="portPlugId" placeholder="e.g. bf1234567890abcdef" />
-      </div>
-      <div class="field-row">
-        <label for="portPlugKey">Local key</label>
-        <input type="text" id="portPlugKey" placeholder="16-character local key" />
-      </div>
-      <div class="field-row">
-        <label for="portPlugIp">Plug IP address</label>
-        <input type="text" id="portPlugIp" placeholder="192.168.1.50" />
-      </div>
-      <div class="field-row">
-        <label for="portPlugVersion">Protocol version</label>
-        <select id="portPlugVersion">
-          <option value="3.3">3.3</option>
-          <option value="3.1">3.1</option>
-          <option value="3.4">3.4</option>
-        </select>
-        <button id="testPlugBtn" type="button">Test Connection</button>
-      </div>
-      <div class="field-row">
-        <span class="field-error" id="portPlugError"></span>
       </div>
       <input type="hidden" id="portId" />
       <div class="modal-actions">

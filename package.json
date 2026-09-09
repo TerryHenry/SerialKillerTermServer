@@ -13,7 +13,6 @@
     "express-session": "^1.18.0",
     "multer": "^2.2.0",
     "serialport": "^12.0.0",
-    "ssh2": "^1.15.0",
-    "tuyapi": "^7.7.1"
+    "ssh2": "^1.15.0"
   }
 }
