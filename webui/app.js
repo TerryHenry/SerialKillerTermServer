@@ -455,6 +455,7 @@ async function loadPortsTable() {
       <td>${p.baudRate}</td>
       <td>${p.dataBits}/${p.stopBits}/${p.parity}</td>
       <td>${accessPill(p.access)}</td>
+      <td>${p.powerPlugId ? '<span class="pill accent"><span class="dot"></span>Configured</span>' : '<span class="pill mute">&mdash;</span>'}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
@@ -530,9 +531,14 @@ function openPortModal(port) {
   document.getElementById('portParity').value = port?.parity || 'none';
   document.getElementById('portRtscts').checked = !!port?.rtscts;
   document.getElementById('portAccess').value = port?.access || 'exclusive';
+  document.getElementById('portPlugId').value = port?.powerPlugId || '';
+  document.getElementById('portPlugKey').value = port?.powerPlugKey || '';
+  document.getElementById('portPlugIp').value = port?.powerPlugIp || '';
+  document.getElementById('portPlugVersion').value = port?.powerPlugVersion || '3.3';
   editingPortPath = port?.path || null;
   clearFieldError('portLabel');
   clearFieldError('portPath');
+  clearFieldError('portPlug');
   refreshSystemPortsDatalist();
   document.getElementById('portModalBackdrop').classList.add('open');
 }
@@ -547,10 +553,46 @@ document.getElementById('refreshSystemPortsBtn').addEventListener('click', refre
 
 document.getElementById('portLabel').addEventListener('input', () => clearFieldError('portLabel'));
 document.getElementById('portPath').addEventListener('input', () => clearFieldError('portPath'));
+for (const id of ['portPlugId', 'portPlugKey', 'portPlugIp']) {
+  document.getElementById(id).addEventListener('input', () => clearFieldError('portPlug'));
+}
+
+function readPlugFields() {
+  return {
+    deviceId: document.getElementById('portPlugId').value.trim(),
+    localKey: document.getElementById('portPlugKey').value.trim(),
+    ip: document.getElementById('portPlugIp').value.trim(),
+    version: document.getElementById('portPlugVersion').value
+  };
+}
+
+document.getElementById('testPlugBtn').addEventListener('click', async () => {
+  const plug = readPlugFields();
+  if (!plug.deviceId || !plug.localKey || !plug.ip) {
+    setFieldError('portPlug', 'Device ID, local key, and IP are all required to test.');
+    return;
+  }
+  clearFieldError('portPlug');
+  const btn = document.getElementById('testPlugBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Testing…';
+  try {
+    const result = await api.post('/api/ports/power-test', plug);
+    setFieldError('portPlug', '');
+    alert(`Connected. Plug is currently ${result.on ? 'ON' : 'OFF'}.`);
+  } catch (err) {
+    setFieldError('portPlug', err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
 
 document.getElementById('savePortBtn').addEventListener('click', async () => {
   const label = document.getElementById('portLabel').value.trim();
   const devPath = document.getElementById('portPath').value.trim();
+  const plug = readPlugFields();
   let valid = true;
   if (!label) {
     setFieldError('portLabel', 'A label is required.');
@@ -558,6 +600,12 @@ document.getElementById('savePortBtn').addEventListener('click', async () => {
   }
   if (!devPath) {
     setFieldError('portPath', 'A device path is required.');
+    valid = false;
+  }
+  const anyPlugField = plug.deviceId || plug.localKey || plug.ip;
+  const allPlugFields = plug.deviceId && plug.localKey && plug.ip;
+  if (anyPlugField && !allPlugFields) {
+    setFieldError('portPlug', 'Fill in device ID, local key, and IP together, or leave all three blank.');
     valid = false;
   }
   if (!valid) return;
@@ -570,7 +618,11 @@ document.getElementById('savePortBtn').addEventListener('click', async () => {
     stopBits: Number(document.getElementById('portStopBits').value),
     parity: document.getElementById('portParity').value,
     rtscts: document.getElementById('portRtscts').checked,
-    access: document.getElementById('portAccess').value
+    access: document.getElementById('portAccess').value,
+    powerPlugId: allPlugFields ? plug.deviceId : '',
+    powerPlugKey: allPlugFields ? plug.localKey : '',
+    powerPlugIp: allPlugFields ? plug.ip : '',
+    powerPlugVersion: allPlugFields ? plug.version : ''
   };
   await api.post('/api/ports', port);
   closePortModal();

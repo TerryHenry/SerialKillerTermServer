@@ -418,6 +418,7 @@
       <li><a href="#connecting">Connecting over SSH</a></li>
       <li><a href="#access-modes">Access modes &amp; permissions</a></li>
       <li><a href="#tftp-usage">Transferring files</a></li>
+      <li><a href="#power-control">Power control</a></li>
     </ul>
     <div class="group-label">Reference</div>
     <ul>
@@ -529,6 +530,7 @@
           <li><strong>Label</strong> &mdash; whatever the device actually is: "Core Switch Console," "Lab Router 3."</li>
           <li><strong>Device path, baud, data/stop bits, parity, RTS/CTS</strong> &mdash; standard serial parameters, matched to the equipment on the other end.</li>
           <li><strong>Access mode</strong> &mdash; who can connect at once, and who can type. Covered in full in <a href="#access-modes">Access modes &amp; permissions</a>.</li>
+          <li><strong>Power control</strong> (optional) &mdash; wire a Tuya/SmartLife smart plug to this port so anyone connected can power it off/on/cycle with <kbd>Ctrl</kbd>+<kbd>P</kbd>. Covered in full in <a href="#power-control">Power control</a>.</li>
         </ul>
         <p>Ports are referenced by ID internally, so renaming a label later doesn't break any user's assignment to it.</p>
       </div>
@@ -676,6 +678,43 @@ tftp terminalserver.local
 <span class="c1"># push a config backup up to the Pi (needs uploads enabled)</span>
 <span class="c2">tftp&gt;</span> put switch-config.txt</pre>
       <p>Files land in and are served from <code>/opt/terminalserver/data/tftp</code> on the Pi &mdash; drop firmware there ahead of time if devices will be pulling it, or leave uploads on if they'll be pushing configs back.</p>
+    </section>
+
+    <section id="power-control">
+      <h2>Power control</h2>
+      <p class="lede">Wire a Tuya/SmartLife smart plug to a serial port, and anyone connected to that port can turn it off, on, or cycle it with <kbd>Ctrl</kbd>+<kbd>P</kbd> &mdash; no separate app, no leaving the SSH session. Useful for the exact moment a device has locked up: you're already watching its console, and now you can also cut its power without walking over.</p>
+
+      <div class="callout tip">
+        <span class="mark">Local, not cloud</span>
+        <p>Control happens directly over your LAN using the plug's own local key &mdash; once configured, switching a plug never depends on Tuya's cloud service being reachable, which matters for a feature whose whole point is fixing things when your network is having a bad day.</p>
+      </div>
+
+      <h3>Getting a plug's device ID and local key</h3>
+      <p>This is a one-time step per plug, done from your own computer &mdash; the appliance never sees your SmartLife account credentials.</p>
+      <ol class="steps">
+        <li>Create a free account at <a href="https://iot.tuya.com" target="_blank" rel="noopener">iot.tuya.com</a> and create a new <strong>Cloud</strong> project (any name/region works; pick the region closest to you).</li>
+        <li>In that project, use <strong>Link Tuya App Account</strong> (under Devices &rarr; Link Tuya App Account) to link your existing SmartLife app account &mdash; this is a QR-code or in-app confirmation step, not a password you hand to anything else.</li>
+        <li>On any machine with Node installed, run <code>npx tuyapi wizard</code> and follow the prompts (it asks for the Cloud project's API key/secret and which linked account to use). It lists every linked device with its <strong>Device ID</strong>, <strong>Local Key</strong>, and IP address (if it's on the same network).</li>
+        <li>Keep that output handy &mdash; you'll paste the ID, key, and IP into the port editor next.</li>
+      </ol>
+
+      <h3>Wiring a plug to a port</h3>
+      <p><strong>Serial Ports</strong> tab &rarr; edit (or add) a port &rarr; the <strong>Power control</strong> section near the bottom: enter the Device ID, Local Key, and IP address from the wizard output, pick the protocol version (<code>3.3</code> covers most devices; try <code>3.1</code> or <code>3.4</code> if a plug doesn't respond), then <strong>Test Connection</strong> to confirm it's reachable and reports its current on/off state before saving. Leave all three fields blank for a port with no plug &mdash; it's entirely optional per port.</p>
+
+      <h3>Using it in a session</h3>
+      <pre class="term">Connected to Core Switch Console. Press Ctrl+] to return to the port menu.
+Press Ctrl+P for power control (on/off/cycle) of this port's plug.
+
+<span class="c2">^P</span>
+[Power: (o)n  (f)off  (c)ycle  any other key = cancel] <span class="c2">c</span>
+[Power cycling "Core Switch Console"'s plug...]
+[Done]</pre>
+      <p>Any key other than <code>o</code>, <code>f</code>, or <code>c</code> cancels without doing anything. If the plug can't be reached (wrong IP, unplugged, network issue) you get a clear <code>[Power control failed: ...]</code> message back in the session &mdash; it never hangs or takes the rest of the appliance down with it.</p>
+
+      <div class="callout warn">
+        <span class="mark">Same permission as typing</span>
+        <p>Power control requires write access to the port &mdash; the same <code>canWrite</code> check covered in <a href="#access-modes">Access modes &amp; permissions</a>. A read-only user or a session a <code>shared-ro</code>/<code>first-write</code> port has demoted to read-only gets "power control requires write access" instead of the menu. Every power action is recorded in the Log tab, tagged with who did it.</p>
+      </div>
     </section>
 
     <section id="security">
