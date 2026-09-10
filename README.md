@@ -53,8 +53,7 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   with a dedicated assigned port connect straight to it; others pick from a
   port menu that shows labels only (no device paths). Read-only users and
   read-only/shared port access modes are enforced identically to the SSH
-  path. **Off by default** — turn it on from the toggle next to the Users
-  tab's account list.
+  path. **Off by default** — turn it on from the toggle on the Server tab.
 - SSH-to-serial itself can also be disabled from the Server tab: the
   Stop/Start button there persists (unlike a plain "stop," a disabled
   server stays disabled across a reboot instead of coming back via
