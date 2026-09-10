@@ -512,6 +512,10 @@
         </ul>
       </div>
       <div class="card">
+        <h4>Web Console (HTTPS-to-Serial)</h4>
+        <p>A toggle here turns browser-based serial access on or off for every account on the <a href="#tab-users">Users tab</a> at once &mdash; <strong>off by default</strong> on a fresh appliance. When enabled, those same accounts can sign into <code>/terminal</code> with their username and password and get a console right in the browser, alongside SSH. Turning it off immediately cuts off new logins and connections; it doesn't touch SSH access at all. Hover the &#9432; next to the toggle for the exact URL to reach it at.</p>
+      </div>
+      <div class="card">
         <h4>Backup &amp; Restore</h4>
         <p><strong>Download Backup</strong> saves everything in the app's config &mdash; SSH/TFTP/web settings, serial ports, users, and admin accounts, including password hashes and public keys &mdash; as a single JSON file.</p>
         <p><strong>Include SSH host key</strong> (off by default) additionally embeds the Pi's SSH private host key in the backup. With it, restoring reproduces this device exactly, including the same host-key fingerprint, so existing users don't get a "host key changed" warning after a re-flash or SD card recovery. Without it, restoring still works fine, but the Pi gets a fresh host key identity.</p>
@@ -592,10 +596,6 @@
           <li><strong>Default port</strong> &mdash; assign one and the user is dropped straight into it on login, no menu, ever. Leave it unset and they see the port picker (if it's enabled) instead.</li>
         </ul>
       </div>
-      <div class="card">
-        <h4>Web Console (HTTPS-to-Serial)</h4>
-        <p>A toggle above the account list turns browser-based serial access on or off for every user on this list at once &mdash; <strong>off by default</strong> on a fresh appliance. When enabled, the same accounts can sign into <code>/terminal</code> with their username and password and get a console right in the browser, alongside SSH. Turning it off immediately cuts off new logins and connections; it doesn't touch SSH access at all.</p>
-      </div>
     </section>
 
     <section id="tab-sessions">
@@ -670,7 +670,7 @@ Enter port number (or "q" to quit): <span class="c2">1</span></pre>
       <p class="lede">The same console users can also get a serial console straight in the browser &mdash; no SSH client needed.</p>
       <div class="callout warn">
         <span class="mark">Off by default</span>
-        <p>Turn it on first from the toggle on the <a href="#tab-users">Users tab</a>. Until an admin does, <code>/terminal</code> shows a "disabled" message instead of a login form &mdash; SSH access is unaffected either way.</p>
+        <p>Turn it on first from the toggle on the <a href="#tab-server">Server tab</a>. Until an admin does, <code>/terminal</code> shows a "disabled" message instead of a login form &mdash; SSH access is unaffected either way.</p>
       </div>
       <p>Once enabled, visit <code>https://terminalserver.local:8443/terminal</code> (or the Pi's IP) and sign in with a console-user username and password &mdash; the same accounts from the Users tab, not an admin account. This is a separate login from the admin UI, even if you're already signed in there.</p>
       <ul>

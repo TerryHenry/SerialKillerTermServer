@@ -718,8 +718,12 @@ document.getElementById('savePortBtn').addEventListener('click', async () => {
   await refreshUserDefaultPortOptions();
 });
 
-// ---------- Users ----------
+// ---------- Web Console (HTTPS-to-Serial) ----------
 let webTerminalEnabled = false;
+
+// Same host/port as this admin UI -- it's the same HTTPS server, just a different path.
+document.getElementById('webTerminalInfoIcon').title =
+  `Once enabled, reach it at ${window.location.origin}/terminal`;
 
 function setWebTerminalStatus(enabled) {
   webTerminalEnabled = enabled;
@@ -735,6 +739,8 @@ document.getElementById('toggleWebTerminalBtn').addEventListener('click', async 
   const result = await api.post('/api/webterminal-settings', { enabled: !webTerminalEnabled });
   setWebTerminalStatus(result.enabled);
 });
+
+// ---------- Users ----------
 
 async function loadUsersTable() {
   const users = await api.get('/api/users');

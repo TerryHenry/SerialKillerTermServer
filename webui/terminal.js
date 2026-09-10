@@ -79,8 +79,6 @@ function connectTerminal(portId) {
   showScreen(terminalScreen);
   const container = document.getElementById('xtermContainer');
   container.innerHTML = '';
-  const readOnlyPill = document.getElementById('terminalReadOnlyPill');
-  readOnlyPill.hidden = true;
 
   term = new Terminal({ cursorBlink: true, convertEol: true });
   term.open(container);
@@ -100,7 +98,6 @@ function connectTerminal(portId) {
       const msg = JSON.parse(event.data);
       if (msg.type === 'connected') {
         document.getElementById('terminalTitle').textContent = `Serial Console — ${msg.label}`;
-        readOnlyPill.hidden = !msg.readOnly;
       } else if (msg.type === 'error') {
         term.write(`\r\n\x1b[31m[${msg.message}]\x1b[0m\r\n`);
       }

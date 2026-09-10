@@ -146,6 +146,19 @@
       </div>
 
       <div class="panel">
+        <h2>Web Console (HTTPS-to-Serial)</h2>
+        <div class="field-row">
+          <span class="info-icon" id="webTerminalInfoIcon" title="Loading…">Reach it at&hellip; &#9432;</span>
+          <span class="status-pill" id="webTerminalStatusPill">
+            <span class="dot"></span>
+            <span id="webTerminalStatusText">Disabled</span>
+          </span>
+          <button id="toggleWebTerminalBtn" class="primary">Enable</button>
+        </div>
+        <p class="hint">Lets the accounts on the Users tab get a serial console right in the browser, alongside SSH &mdash; no extra software needed. Off by default.</p>
+      </div>
+
+      <div class="panel">
         <h2>Backup &amp; Restore</h2>
         <p class="hint">Covers SSH/TFTP/web settings, serial ports, users, and admin accounts (including password hashes and public keys). Store downloaded backups somewhere secure; they contain credential data.</p>
         <div class="field-row">
@@ -275,16 +288,7 @@
     <div class="tab-content" id="tab-users">
       <div class="panel">
         <h2>Users</h2>
-        <p class="hint">These accounts can connect over SSH.</p>
-        <div class="field-row">
-          <span>Web Console (HTTPS-to-Serial)</span>
-          <span class="status-pill" id="webTerminalStatusPill">
-            <span class="dot"></span>
-            <span id="webTerminalStatusText">Disabled</span>
-          </span>
-          <button id="toggleWebTerminalBtn" class="primary">Enable</button>
-        </div>
-        <p class="hint">When enabled, the same accounts can also connect from a browser at <a href="/terminal" target="_blank" rel="noopener">/terminal</a> using their username/password &mdash; no SSH client needed. Off by default.</p>
+        <p class="hint">These accounts can connect over SSH, and over the web too if the Web Console is enabled on the Server tab.</p>
         <table class="data-table" id="usersTable">
           <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th></th></tr></thead>
           <tbody></tbody>
