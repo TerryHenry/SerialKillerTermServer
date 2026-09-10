@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Serial Killer Terminal Server — Console</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="assets/xterm/xterm.css" />
+  <style>
+    .terminal-screen { display: none; flex-direction: column; height: 100vh; }
+    .terminal-screen.active { display: flex; }
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .terminal-bar h1 { font-size: 14px; margin: 0; flex: 1; }
+    #xtermContainer { flex: 1; padding: 8px; overflow: hidden; }
+    .port-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+    .port-list button { text-align: left; }
+  </style>
+</head>
+<body>
+  <!-- Login screen -->
+  <div class="auth-screen active" id="loginScreen">
+    <form class="auth-card" id="terminalLoginForm">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Serial Console</h1>
+      <label>Username</label>
+      <input type="text" id="terminalUsername" required autocomplete="username" />
+      <label>Password</label>
+      <input type="password" id="terminalPassword" required autocomplete="current-password" />
+      <div class="auth-error" id="terminalLoginError"></div>
+      <button type="submit" class="primary">Connect</button>
+    </form>
+  </div>
+
+  <!-- Port picker (only shown when the user has no fixed assigned port) -->
+  <div class="auth-screen" id="portPickerScreen">
+    <div class="auth-card">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Choose a Port</h1>
+      <div class="port-list" id="portList"></div>
+      <div class="auth-error" id="portPickerError"></div>
+    </div>
+  </div>
+
+  <!-- Shown instead of the login form when the admin hasn't turned this feature on -->
+  <div class="auth-screen" id="disabledScreen">
+    <div class="auth-card">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Web Console Disabled</h1>
+      <p class="hint">The administrator hasn't turned on browser-based serial access. Ask them to enable it from the Users tab in the admin UI, or connect over SSH instead.</p>
+    </div>
+  </div>
+
+  <!-- Terminal screen -->
+  <div class="terminal-screen" id="terminalScreen">
+    <div class="terminal-bar">
+      <h1 id="terminalTitle">Serial Console</h1>
+      <button id="terminalDisconnectBtn">Disconnect</button>
+    </div>
+    <div id="xtermContainer"></div>
+  </div>
+
+  <script src="assets/xterm/xterm.js"></script>
+  <script src="terminal.js"></script>
+</body>
+</html>

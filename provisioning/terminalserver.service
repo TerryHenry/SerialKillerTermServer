@@ -12,7 +12,12 @@ User=terminalserver
 Group=terminalserver
 Environment=TS_DATA_DIR=/opt/terminalserver/data
 AmbientCapabilities=CAP_NET_BIND_SERVICE
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+# No CapabilityBoundingSet restriction here: it applies to this whole process tree,
+# including the "sudo <wifi-helper.sh>" child the app shells out to for Wi-Fi control.
+# A narrow bounding set (e.g. just CAP_NET_BIND_SERVICE) blocks sudo's own setuid/setgid
+# transition to root ("sudo: unable to change to root gid: Operation not permitted"),
+# breaking Wi-Fi control entirely. The actual privilege boundary is the sudoers.d rule
+# itself, which limits this account to running exactly one fixed script as root.
 
 [Install]
 WantedBy=multi-user.target

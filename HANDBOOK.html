@@ -406,6 +406,7 @@
     <ul>
       <li><a href="#tab-dashboard">Dashboard</a></li>
       <li><a href="#tab-server">Server</a></li>
+      <li><a href="#tab-network">Network</a></li>
       <li><a href="#tab-ports">Serial Ports</a></li>
       <li><a href="#tab-tftp">TFTP</a></li>
       <li><a href="#tab-users">Users</a></li>
@@ -416,6 +417,7 @@
     <div class="group-label">Using it</div>
     <ul>
       <li><a href="#connecting">Connecting over SSH</a></li>
+      <li><a href="#connecting-web">Connecting over the Web</a></li>
       <li><a href="#access-modes">Access modes &amp; permissions</a></li>
       <li><a href="#tftp-usage">Transferring files</a></li>
     </ul>
@@ -485,7 +487,7 @@
 
     <section id="tab-dashboard">
       <h2>Web Admin UI</h2>
-      <p class="lede">Nine tabs across the top of the admin UI. Here's what each one does.</p>
+      <p class="lede">Ten tabs across the top of the admin UI. Here's what each one does.</p>
 
       <h3>Dashboard</h3>
       <div class="card">
@@ -505,9 +507,13 @@
           <li><strong>Port picker menu</strong> &mdash; when on, a user with no port of their own sees a numbered list of ports to choose from after login. When off, such a user is told to contact an administrator instead.</li>
           <li><strong>Start automatically on boot</strong> &mdash; on by default.</li>
           <li><strong>Login banner</strong> &mdash; free text shown to every SSH user right after connecting.</li>
-          <li><strong>Start/Stop</strong> &mdash; the pill next to the button shows live status.</li>
+          <li><strong>Start/Stop</strong> &mdash; the pill next to the button shows live status. This is a real disable switch, not just a pause: <strong>Stop</strong> persists, so SSH-to-serial stays off even across a reboot, until you click <strong>Start</strong> again.</li>
           <li><strong>Host key fingerprint</strong> &mdash; shown here so you can verify it out-of-band before trusting a new SSH connection.</li>
         </ul>
+      </div>
+      <div class="card">
+        <h4>Web Console (HTTPS-to-Serial)</h4>
+        <p>A toggle here turns browser-based serial access on or off for every account on the <a href="#tab-users">Users tab</a> at once &mdash; <strong>off by default</strong> on a fresh appliance. When enabled, those same accounts can sign into <code>/terminal</code> with their username and password and get a console right in the browser, alongside SSH. Turning it off immediately cuts off new logins and connections; it doesn't touch SSH access at all. Hover the &#9432; next to the toggle for the exact URL to reach it at.</p>
       </div>
       <div class="card">
         <h4>Backup &amp; Restore</h4>
@@ -518,6 +524,26 @@
       <div class="callout warn">
         <span class="mark">Handle with care</span>
         <p>A backup file contains password hashes and SSH public keys for every account on the appliance &mdash; and, if you opted in, an SSH private key. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back every admin's password too, to whatever it was when that backup was taken.</p>
+      </div>
+    </section>
+
+    <section id="tab-network">
+      <h3>Network</h3>
+      <div class="card">
+        <p>Everything about how this Pi reaches (and is reached over) the network.</p>
+        <ul>
+          <li><strong>Interfaces</strong> &mdash; every Ethernet/Wi-Fi interface NetworkManager knows about, its connection state, IP address, and the connection profile name it's using.</li>
+          <li><strong>Public IP</strong> &mdash; this Pi's IP as seen from the internet, when it has outbound access. Blank if it doesn't.</li>
+          <li><strong>Refresh</strong> &mdash; re-checks everything above on demand rather than waiting for the periodic update.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Wi-Fi</h4>
+        <p><strong>Enable/Disable Wi-Fi</strong> toggles the radio itself. <strong>Scan for Networks</strong> lists nearby SSIDs with signal strength and security type &mdash; click <strong>Use</strong> on one to fill in its SSID, then enter the password and <strong>Connect</strong>. You can also just type an SSID directly if it's hidden or out of range of the scan.</p>
+      </div>
+      <div class="callout tip">
+        <span class="mark">Under the hood</span>
+        <p>The app itself runs as an unprivileged system account. Wi-Fi changes go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
       </div>
     </section>
 
@@ -563,9 +589,9 @@
     <section id="tab-users">
       <h3>Users</h3>
       <div class="card">
-        <p>Each row is one SSH console account &mdash; unrelated to the web admin login. Rows are sorted alphabetically by username.</p>
+        <p>Each row is one console account &mdash; unrelated to the web admin login. Rows are sorted alphabetically by username.</p>
         <ul>
-          <li><strong>Authentication method</strong> &mdash; password, an SSH public key, or either.</li>
+          <li><strong>Authentication method</strong> &mdash; password, an SSH public key, or either. (Public-key auth only applies to SSH; the web console is password-only.)</li>
           <li><strong>Permission</strong> &mdash; <span class="pill ok"><span class="dot"></span>Read/write</span> or <span class="pill mute"><span class="dot"></span>Read-only</span>. Explained together with port access modes below.</li>
           <li><strong>Default port</strong> &mdash; assign one and the user is dropped straight into it on login, no menu, ever. Leave it unset and they see the port picker (if it's enabled) instead.</li>
         </ul>
@@ -637,6 +663,26 @@ Enter port number (or "q" to quit): <span class="c2">1</span></pre>
 
       <h3>If your assigned port isn't available</h3>
       <p>Users with a <em>default port</em> assigned never see the picker menu &mdash; that's deliberate, since they're meant to only ever reach one thing. If that port has been deleted, can't be opened, or drops mid-session, you're disconnected with a clear reason instead of being handed a menu you were never meant to see.</p>
+    </section>
+
+    <section id="connecting-web">
+      <h2>Connecting over the Web</h2>
+      <p class="lede">The same console users can also get a serial console straight in the browser &mdash; no SSH client needed.</p>
+      <div class="callout warn">
+        <span class="mark">Off by default</span>
+        <p>Turn it on first from the toggle on the <a href="#tab-server">Server tab</a>. Until an admin does, <code>/terminal</code> shows a "disabled" message instead of a login form &mdash; SSH access is unaffected either way.</p>
+      </div>
+      <p>Once enabled, visit <code>https://terminalserver.local:8443/terminal</code> (or the Pi's IP) and sign in with a console-user username and password &mdash; the same accounts from the Users tab, not an admin account. This is a separate login from the admin UI, even if you're already signed in there.</p>
+      <ul>
+        <li>A user with a <strong>default port</strong> assigned connects straight to it, same as over SSH.</li>
+        <li>A user without one sees a port picker in the browser instead (only if the port picker is enabled on the <a href="#tab-server">Server tab</a>) &mdash; by label only, not the underlying device path.</li>
+        <li><strong>Read-only</strong> users and read-only/shared port access modes are enforced exactly as they are over SSH &mdash; see <a href="#access-modes">Access modes &amp; permissions</a>.</li>
+        <li><strong>Disconnect</strong> ends the session and returns to the login screen.</li>
+      </ul>
+      <div class="callout tip">
+        <span class="mark">SSH still works</span>
+        <p>The web console is an additional way in, not a replacement &mdash; the same users can keep connecting over SSH on port 2222 exactly as before.</p>
+      </div>
     </section>
 
     <section id="access-modes">
@@ -723,6 +769,14 @@ tftp terminalserver.local
             <tr>
               <td>Locked out of the web admin UI</td>
               <td>There's no self-service reset. Someone with SSH access to the Pi (port 22) can delete <code>/opt/terminalserver/data/config.json</code>'s <code>web</code> section values or restore from a backup to re-trigger setup &mdash; back up that file once you've configured things.</td>
+            </tr>
+            <tr>
+              <td>Can't log into <code>/terminal</code> with an admin account</td>
+              <td>Expected &mdash; the web console only accepts the console users from the <a href="#tab-users">Users tab</a>, the same ones SSH uses. It's a separate login from the admin UI on purpose.</td>
+            </tr>
+            <tr>
+              <td>Wi-Fi radio won't turn on, or Connect fails</td>
+              <td>Confirm the Pi has Wi-Fi hardware and NetworkManager is managing it (<code>nmcli device status</code> over SSH on port 22). If the sudoers rule failed validation during setup (see <code>/opt/terminalserver/data/setup.log</code>), Wi-Fi control is unavailable until that's fixed.</td>
             </tr>
           </tbody>
         </table>

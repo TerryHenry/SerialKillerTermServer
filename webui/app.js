@@ -118,10 +118,14 @@ document.getElementById('forceChangeForm').addEventListener('submit', async (e) 
   e.preventDefault();
   const errorEl = document.getElementById('forceChangeError');
   errorEl.textContent = '';
+  const password = document.getElementById('forceChangePassword').value;
+  const confirmPassword = document.getElementById('forceChangePasswordConfirm').value;
+  if (password !== confirmPassword) {
+    errorEl.textContent = 'Passwords do not match.';
+    return;
+  }
   try {
-    await api.post('/api/admin-password', {
-      password: document.getElementById('forceChangePassword').value
-    });
+    await api.post('/api/admin-password', { password });
     hide(forceChangeScreen);
     document.body.classList.add('app-mode');
     show(appRoot);
@@ -276,6 +280,7 @@ async function loadServerSettings() {
   document.getElementById('allowMenu').checked = config.ssh.allowPortMenu;
   document.getElementById('autoStart').checked = config.ssh.autoStart;
   document.getElementById('banner').value = config.ssh.banner;
+  setWebTerminalStatus(config.webTerminal.enabled);
   const fp = await api.get('/api/host-key-fingerprint');
   document.getElementById('hostKeyFingerprint').textContent = fp.fingerprint || '(unavailable)';
 }
@@ -289,14 +294,143 @@ document.getElementById('saveServerSettingsBtn').addEventListener('click', async
   });
 });
 
+// ---------- Network ----------
+let wifiRadioEnabled = false;
+
+function renderNetworkInterfaces(interfaces) {
+  const tbody = document.querySelector('#networkInterfacesTable tbody');
+  const empty = document.getElementById('networkInterfacesEmpty');
+  tbody.innerHTML = '';
+  empty.style.display = interfaces.length ? 'none' : '';
+  for (const iface of interfaces) {
+    const tr = document.createElement('tr');
+    const statusClass = iface.state === 'connected' ? 'pill ok' : 'pill mute';
+    tr.innerHTML = `
+      <td>${escapeHtml(iface.name)}</td>
+      <td>${escapeHtml(iface.type)}</td>
+      <td><span class="${statusClass}"><span class="dot"></span>${escapeHtml(iface.state)}</span></td>
+      <td>${escapeHtml(iface.ip || '—')}</td>
+      <td>${escapeHtml(iface.connection || '—')}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function setWifiRadioUi(state) {
+  wifiRadioEnabled = state === 'enabled';
+  const pill = document.getElementById('wifiRadioPill');
+  const text = document.getElementById('wifiRadioText');
+  const btn = document.getElementById('toggleWifiBtn');
+  pill.classList.toggle('running', wifiRadioEnabled);
+  text.textContent = state || 'Unknown';
+  btn.textContent = wifiRadioEnabled ? 'Disable Wi-Fi' : 'Enable Wi-Fi';
+  btn.disabled = state == null;
+}
+
+async function loadNetwork() {
+  const data = await api.get('/api/network');
+  renderNetworkInterfaces(data.interfaces);
+  document.getElementById('publicIpValue').textContent = data.publicIp || 'unavailable';
+  setWifiRadioUi(data.wifiRadio);
+}
+
+document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());
+
+document.getElementById('toggleWifiBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('wifiMsg');
+  msgEl.textContent = '';
+  btn.disabled = true;
+  try {
+    await api.post(wifiRadioEnabled ? '/api/network/wifi/disable' : '/api/network/wifi/enable');
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function renderWifiScanResults(networks) {
+  const tbody = document.querySelector('#wifiScanTable tbody');
+  const empty = document.getElementById('wifiScanEmpty');
+  tbody.innerHTML = '';
+  empty.style.display = networks.length ? 'none' : '';
+  for (const net of networks) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    const useBtn = document.createElement('button');
+    useBtn.textContent = 'Use';
+    useBtn.addEventListener('click', () => {
+      document.getElementById('wifiConnectSsid').value = net.ssid;
+      document.getElementById('wifiConnectPassword').focus();
+    });
+    td.appendChild(useBtn);
+    tr.innerHTML = `
+      <td>${escapeHtml(net.ssid)}</td>
+      <td>${escapeHtml(String(net.signal))}%</td>
+      <td>${escapeHtml(net.security || 'open')}</td>
+    `;
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById('scanWifiBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('wifiMsg');
+  msgEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Scanning…';
+  try {
+    renderWifiScanResults(await api.get('/api/network/wifi/scan'));
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Scan for Networks';
+  }
+});
+
+document.getElementById('wifiConnectBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('wifiMsg');
+  const ssid = document.getElementById('wifiConnectSsid').value.trim();
+  const password = document.getElementById('wifiConnectPassword').value;
+  msgEl.textContent = '';
+  if (!ssid) {
+    msgEl.textContent = 'SSID is required';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Connecting…';
+  try {
+    await api.post('/api/network/wifi/connect', { ssid, password });
+    document.getElementById('wifiConnectPassword').value = '';
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Connect';
+  }
+});
+
 // ---------- Admin password ----------
 document.getElementById('changeAdminPasswordBtn').addEventListener('click', async () => {
   const msg = document.getElementById('adminPasswordMsg');
   msg.textContent = '';
   const password = document.getElementById('newAdminPassword').value;
+  const confirmPassword = document.getElementById('newAdminPasswordConfirm').value;
+  if (password !== confirmPassword) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Passwords do not match.';
+    return;
+  }
   try {
     await api.post('/api/admin-password', { password });
     document.getElementById('newAdminPassword').value = '';
+    document.getElementById('newAdminPasswordConfirm').value = '';
     msg.style.color = 'var(--ok)';
     msg.textContent = 'Password updated.';
   } catch (err) {
@@ -357,6 +491,7 @@ function openAdminModal(admin) {
   document.getElementById('adminId').value = admin?.id || '';
   document.getElementById('adminUsername').value = admin?.username || '';
   document.getElementById('adminPassword').value = '';
+  document.getElementById('adminPasswordConfirm').value = '';
   document.getElementById('adminPasswordHint').style.display = admin ? 'inline' : 'none';
   clearFieldError('adminUsername');
   clearFieldError('adminPassword');
@@ -376,6 +511,7 @@ document.getElementById('saveAdminBtn').addEventListener('click', async () => {
   const id = document.getElementById('adminId').value;
   const username = document.getElementById('adminUsername').value.trim();
   const password = document.getElementById('adminPassword').value;
+  const confirmPassword = document.getElementById('adminPasswordConfirm').value;
   let valid = true;
   if (!username) {
     setFieldError('adminUsername', 'Username is required.');
@@ -387,6 +523,10 @@ document.getElementById('saveAdminBtn').addEventListener('click', async () => {
   }
   if (password && password.length < 8) {
     setFieldError('adminPassword', 'Password must be at least 8 characters.');
+    valid = false;
+  }
+  if (password && password !== confirmPassword) {
+    setFieldError('adminPassword', 'Passwords do not match.');
     valid = false;
   }
   if (!valid) return;
@@ -578,7 +718,30 @@ document.getElementById('savePortBtn').addEventListener('click', async () => {
   await refreshUserDefaultPortOptions();
 });
 
+// ---------- Web Console (HTTPS-to-Serial) ----------
+let webTerminalEnabled = false;
+
+// Same host/port as this admin UI -- it's the same HTTPS server, just a different path.
+document.getElementById('webTerminalInfoIcon').title =
+  `Once enabled, reach it at ${window.location.origin}/terminal`;
+
+function setWebTerminalStatus(enabled) {
+  webTerminalEnabled = enabled;
+  const pill = document.getElementById('webTerminalStatusPill');
+  const text = document.getElementById('webTerminalStatusText');
+  const btn = document.getElementById('toggleWebTerminalBtn');
+  pill.classList.toggle('running', enabled);
+  text.textContent = enabled ? 'Enabled' : 'Disabled';
+  btn.textContent = enabled ? 'Disable' : 'Enable';
+}
+
+document.getElementById('toggleWebTerminalBtn').addEventListener('click', async () => {
+  const result = await api.post('/api/webterminal-settings', { enabled: !webTerminalEnabled });
+  setWebTerminalStatus(result.enabled);
+});
+
 // ---------- Users ----------
+
 async function loadUsersTable() {
   const users = await api.get('/api/users');
   users.sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: 'base' }));
@@ -641,6 +804,7 @@ async function openUserModal(user) {
   document.getElementById('userUsername').value = user?.username || '';
   document.getElementById('userAuthMethod').value = user?.authMethod || 'password';
   document.getElementById('userPassword').value = '';
+  document.getElementById('userPasswordConfirm').value = '';
   document.getElementById('userPublicKey').value = user?.publicKey || '';
   document.getElementById('userPermission').value = user?.permission || 'read-write';
   await refreshUserDefaultPortOptions(user?.defaultPortId);
@@ -665,6 +829,7 @@ document.getElementById('saveUserBtn').addEventListener('click', async () => {
   const username = document.getElementById('userUsername').value.trim();
   const authMethod = document.getElementById('userAuthMethod').value;
   const password = document.getElementById('userPassword').value;
+  const confirmPassword = document.getElementById('userPasswordConfirm').value;
   const publicKey = document.getElementById('userPublicKey').value.trim();
   const existingId = document.getElementById('userId').value;
 
@@ -675,6 +840,10 @@ document.getElementById('saveUserBtn').addEventListener('click', async () => {
   }
   if (authMethod !== 'publickey' && !password && !existingId) {
     setFieldError('userPassword', 'A password is required for a new user using password authentication.');
+    valid = false;
+  }
+  if (password && password !== confirmPassword) {
+    setFieldError('userPassword', 'Passwords do not match.');
     valid = false;
   }
   if (authMethod !== 'password' && !publicKey) {
@@ -835,6 +1004,7 @@ async function initApp() {
   const status = await api.get('/api/server/status');
   setStatus(status.running);
   await loadServerSettings();
+  await loadNetwork();
   await loadTftpSettings();
   await loadTftpFiles();
   await loadPortsTable();

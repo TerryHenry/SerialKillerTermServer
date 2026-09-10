@@ -15,15 +15,17 @@ logStore.init(configStore.DATA_DIR);
 const hostKey = ensureHostKey(configStore.DATA_DIR);
 const tlsCert = ensureTlsCert(configStore.DATA_DIR);
 
-const app = createWebServer(sshServer, tftpServer, hostKey.publicKey);
+const { app, attachTerminalSocket } = createWebServer(sshServer, tftpServer, hostKey.publicKey);
 app.locals.hostKeyPrivate = hostKey.privateKey;
 
 const webPort = configStore.getConfig().web.port;
-https.createServer({ key: tlsCert.key, cert: tlsCert.cert }, app).listen(webPort, '0.0.0.0', () => {
+const httpsServer = https.createServer({ key: tlsCert.key, cert: tlsCert.cert }, app);
+attachTerminalSocket(httpsServer);
+httpsServer.listen(webPort, '0.0.0.0', () => {
   console.log(`Serial Killer Terminal Server admin UI listening on https://0.0.0.0:${webPort}`);
 });
 
-if (configStore.getConfig().ssh.autoStart) {
+if (configStore.getConfig().ssh.enabled && configStore.getConfig().ssh.autoStart) {
   sshServer.start(hostKey.privateKey);
 }
 
