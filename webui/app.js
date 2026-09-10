@@ -280,6 +280,7 @@ async function loadServerSettings() {
   document.getElementById('allowMenu').checked = config.ssh.allowPortMenu;
   document.getElementById('autoStart').checked = config.ssh.autoStart;
   document.getElementById('banner').value = config.ssh.banner;
+  setWebTerminalStatus(config.webTerminal.enabled);
   const fp = await api.get('/api/host-key-fingerprint');
   document.getElementById('hostKeyFingerprint').textContent = fp.fingerprint || '(unavailable)';
 }
@@ -718,6 +719,23 @@ document.getElementById('savePortBtn').addEventListener('click', async () => {
 });
 
 // ---------- Users ----------
+let webTerminalEnabled = false;
+
+function setWebTerminalStatus(enabled) {
+  webTerminalEnabled = enabled;
+  const pill = document.getElementById('webTerminalStatusPill');
+  const text = document.getElementById('webTerminalStatusText');
+  const btn = document.getElementById('toggleWebTerminalBtn');
+  pill.classList.toggle('running', enabled);
+  text.textContent = enabled ? 'Enabled' : 'Disabled';
+  btn.textContent = enabled ? 'Disable' : 'Enable';
+}
+
+document.getElementById('toggleWebTerminalBtn').addEventListener('click', async () => {
+  const result = await api.post('/api/webterminal-settings', { enabled: !webTerminalEnabled });
+  setWebTerminalStatus(result.enabled);
+});
+
 async function loadUsersTable() {
   const users = await api.get('/api/users');
   users.sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: 'base' }));

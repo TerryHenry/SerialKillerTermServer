@@ -45,9 +45,15 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 - **Web-based serial console** (`https://<pi>:8443/terminal`) — the same
   users configured in the Users tab can also get a serial console straight
   in the browser (xterm.js, no extra software), alongside SSH access. Users
-  with a dedicated assigned port connect straight to it; others pick from
-  the same port menu SSH users get. Read-only users and read-only/shared
-  port access modes are enforced identically to the SSH path.
+  with a dedicated assigned port connect straight to it; others pick from a
+  port menu that shows labels only (no device paths). Read-only users and
+  read-only/shared port access modes are enforced identically to the SSH
+  path. **Off by default** — turn it on from the toggle next to the Users
+  tab's account list.
+- SSH-to-serial itself can also be disabled from the Server tab: the
+  Stop/Start button there persists (unlike a plain "stop," a disabled
+  server stays disabled across a reboot instead of coming back via
+  auto-start).
 - **Audit log** — admin actions (settings changes, port/user/admin
   create/delete, backup restores, TFTP file changes) are recorded, tagged
   with who did it, right alongside the rest of the server's activity log.
@@ -135,4 +141,9 @@ its own first-boot provisioning.
   granted a narrowly-scoped, validated `sudoers.d` rule during setup that
   lets it run exactly one fixed helper script
   (`provisioning/wifi-helper.sh`) as root — never a raw shell or arbitrary
-  `nmcli` invocation.
+  `nmcli` invocation. `terminalserver.service` intentionally carries no
+  `CapabilityBoundingSet` restriction, because that setting applies to the
+  whole process tree including the `sudo` child the app shells out to —
+  a narrow bounding set breaks sudo's own root transition outright (`sudo:
+  unable to change to root gid: Operation not permitted`). The actual
+  privilege boundary is the sudoers rule, not the capability set.

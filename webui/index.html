@@ -275,7 +275,16 @@
     <div class="tab-content" id="tab-users">
       <div class="panel">
         <h2>Users</h2>
-        <p class="hint">These accounts can connect over SSH, and also over the web at <a href="/terminal" target="_blank" rel="noopener">/terminal</a> &mdash; a browser-based serial console using the same username/password.</p>
+        <p class="hint">These accounts can connect over SSH.</p>
+        <div class="field-row">
+          <span>Web Console (HTTPS-to-Serial)</span>
+          <span class="status-pill" id="webTerminalStatusPill">
+            <span class="dot"></span>
+            <span id="webTerminalStatusText">Disabled</span>
+          </span>
+          <button id="toggleWebTerminalBtn" class="primary">Enable</button>
+        </div>
+        <p class="hint">When enabled, the same accounts can also connect from a browser at <a href="/terminal" target="_blank" rel="noopener">/terminal</a> using their username/password &mdash; no SSH client needed. Off by default.</p>
         <table class="data-table" id="usersTable">
           <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th></th></tr></thead>
           <tbody></tbody>

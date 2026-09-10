@@ -3,9 +3,10 @@
 const loginScreen = document.getElementById('loginScreen');
 const portPickerScreen = document.getElementById('portPickerScreen');
 const terminalScreen = document.getElementById('terminalScreen');
+const disabledScreen = document.getElementById('disabledScreen');
 
 function showScreen(el) {
-  [loginScreen, portPickerScreen, terminalScreen].forEach((s) => s.classList.remove('active'));
+  [loginScreen, portPickerScreen, terminalScreen, disabledScreen].forEach((s) => s.classList.remove('active'));
   el.classList.add('active');
 }
 
@@ -61,7 +62,7 @@ async function showPortPicker() {
     for (const port of ports) {
       const btn = document.createElement('button');
       const clientsNote = port.clients ? ` — ${port.clients} connected` : '';
-      btn.textContent = `${port.label} (${port.path})${port.present ? '' : ' — not present'}${clientsNote}`;
+      btn.textContent = `${port.label}${port.present ? '' : ' — not present'}${clientsNote}`;
       btn.disabled = !port.present;
       btn.addEventListener('click', () => connectTerminal(port.id));
       listEl.appendChild(btn);
@@ -139,6 +140,10 @@ document.getElementById('terminalDisconnectBtn').addEventListener('click', async
 (async () => {
   try {
     const session = await apiGet('/api/terminal/session');
+    if (!session.enabled) {
+      showScreen(disabledScreen);
+      return;
+    }
     if (session.authenticated) {
       if (session.needsPortSelection) {
         await showPortPicker();

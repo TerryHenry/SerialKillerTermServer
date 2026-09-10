@@ -25,7 +25,7 @@ httpsServer.listen(webPort, '0.0.0.0', () => {
   console.log(`Serial Killer Terminal Server admin UI listening on https://0.0.0.0:${webPort}`);
 });
 
-if (configStore.getConfig().ssh.autoStart) {
+if (configStore.getConfig().ssh.enabled && configStore.getConfig().ssh.autoStart) {
   sshServer.start(hostKey.privateKey);
 }
 
