@@ -45,6 +45,8 @@
       <p class="hint">This account is still using the default password. Choose a new one to continue.</p>
       <label>New password <span class="hint">(min 8 characters)</span></label>
       <input type="password" id="forceChangePassword" minlength="8" required />
+      <label>Confirm password</label>
+      <input type="password" id="forceChangePasswordConfirm" minlength="8" required />
       <div class="auth-error" id="forceChangeError"></div>
       <button type="submit" class="primary">Set Password &amp; Continue</button>
     </form>
@@ -66,6 +68,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="server">Server</button>
+      <button class="tab-btn" data-tab="network">Network</button>
       <button class="tab-btn" data-tab="ports">Serial Ports</button>
       <button class="tab-btn" data-tab="tftp">TFTP</button>
       <button class="tab-btn" data-tab="users">Users</button>
@@ -161,6 +164,57 @@
       </div>
     </div>
 
+    <div class="tab-content" id="tab-network">
+      <div class="panel">
+        <h2>Interfaces</h2>
+        <table class="data-table" id="networkInterfacesTable">
+          <thead><tr><th>Interface</th><th>Type</th><th>Status</th><th>IP Address</th><th>Connection</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" id="networkInterfacesEmpty">No network interfaces detected.</p>
+        <div class="field-row">
+          <label>Public IP</label>
+          <span id="publicIpValue">&mdash;</span>
+        </div>
+        <div class="field-row">
+          <button id="refreshNetworkBtn">Refresh</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Wi-Fi</h2>
+        <div class="field-row">
+          <span>Radio</span>
+          <span class="status-pill" id="wifiRadioPill">
+            <span class="dot"></span>
+            <span id="wifiRadioText">Unknown</span>
+          </span>
+          <button id="toggleWifiBtn" class="primary">Enable Wi-Fi</button>
+        </div>
+        <div class="field-row">
+          <button id="scanWifiBtn">Scan for Networks</button>
+        </div>
+        <table class="data-table" id="wifiScanTable">
+          <thead><tr><th>SSID</th><th>Signal</th><th>Security</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" id="wifiScanEmpty">No scan results yet.</p>
+        <div class="field-row">
+          <label for="wifiConnectSsid">SSID</label>
+          <input type="text" id="wifiConnectSsid" autocomplete="off" />
+        </div>
+        <div class="field-row">
+          <label for="wifiConnectPassword">Password</label>
+          <input type="password" id="wifiConnectPassword" autocomplete="off" />
+          <span class="hint">Leave blank for an open network</span>
+        </div>
+        <div class="field-row">
+          <button id="wifiConnectBtn" class="primary">Connect</button>
+        </div>
+        <div class="auth-error" id="wifiMsg"></div>
+      </div>
+    </div>
+
     <div class="tab-content" id="tab-ports">
       <div class="panel">
         <h2>Configured Serial Ports</h2>
@@ -221,6 +275,7 @@
     <div class="tab-content" id="tab-users">
       <div class="panel">
         <h2>Users</h2>
+        <p class="hint">These accounts can connect over SSH, and also over the web at <a href="/terminal" target="_blank" rel="noopener">/terminal</a> &mdash; a browser-based serial console using the same username/password.</p>
         <table class="data-table" id="usersTable">
           <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th></th></tr></thead>
           <tbody></tbody>
@@ -253,6 +308,10 @@
         <div class="field-row column">
           <label for="newAdminPassword">New password</label>
           <input type="password" id="newAdminPassword" minlength="8" />
+        </div>
+        <div class="field-row column">
+          <label for="newAdminPasswordConfirm">Confirm new password</label>
+          <input type="password" id="newAdminPasswordConfirm" minlength="8" />
         </div>
         <div class="field-row">
           <button id="changeAdminPasswordBtn">Change Password</button>
@@ -360,6 +419,8 @@
       <div class="field-row column" id="userPasswordRow">
         <label for="userPassword">Password <span class="hint">(leave blank to keep existing)</span></label>
         <input type="password" id="userPassword" />
+        <label for="userPasswordConfirm">Confirm password</label>
+        <input type="password" id="userPasswordConfirm" />
         <span class="field-error" id="userPasswordError"></span>
       </div>
       <div class="field-row column" id="userPublicKeyRow">
@@ -400,6 +461,8 @@
       <div class="field-row column">
         <label for="adminPassword">Password <span class="hint" id="adminPasswordHint">(leave blank to keep existing)</span></label>
         <input type="password" id="adminPassword" minlength="8" />
+        <label for="adminPasswordConfirm">Confirm password</label>
+        <input type="password" id="adminPasswordConfirm" minlength="8" />
         <span class="field-error" id="adminPasswordError"></span>
       </div>
       <input type="hidden" id="adminId" />

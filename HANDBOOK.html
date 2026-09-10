@@ -406,6 +406,7 @@
     <ul>
       <li><a href="#tab-dashboard">Dashboard</a></li>
       <li><a href="#tab-server">Server</a></li>
+      <li><a href="#tab-network">Network</a></li>
       <li><a href="#tab-ports">Serial Ports</a></li>
       <li><a href="#tab-tftp">TFTP</a></li>
       <li><a href="#tab-users">Users</a></li>
@@ -416,6 +417,7 @@
     <div class="group-label">Using it</div>
     <ul>
       <li><a href="#connecting">Connecting over SSH</a></li>
+      <li><a href="#connecting-web">Connecting over the Web</a></li>
       <li><a href="#access-modes">Access modes &amp; permissions</a></li>
       <li><a href="#tftp-usage">Transferring files</a></li>
     </ul>
@@ -485,7 +487,7 @@
 
     <section id="tab-dashboard">
       <h2>Web Admin UI</h2>
-      <p class="lede">Nine tabs across the top of the admin UI. Here's what each one does.</p>
+      <p class="lede">Ten tabs across the top of the admin UI. Here's what each one does.</p>
 
       <h3>Dashboard</h3>
       <div class="card">
@@ -518,6 +520,26 @@
       <div class="callout warn">
         <span class="mark">Handle with care</span>
         <p>A backup file contains password hashes and SSH public keys for every account on the appliance &mdash; and, if you opted in, an SSH private key. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back every admin's password too, to whatever it was when that backup was taken.</p>
+      </div>
+    </section>
+
+    <section id="tab-network">
+      <h3>Network</h3>
+      <div class="card">
+        <p>Everything about how this Pi reaches (and is reached over) the network.</p>
+        <ul>
+          <li><strong>Interfaces</strong> &mdash; every Ethernet/Wi-Fi interface NetworkManager knows about, its connection state, IP address, and the connection profile name it's using.</li>
+          <li><strong>Public IP</strong> &mdash; this Pi's IP as seen from the internet, when it has outbound access. Blank if it doesn't.</li>
+          <li><strong>Refresh</strong> &mdash; re-checks everything above on demand rather than waiting for the periodic update.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Wi-Fi</h4>
+        <p><strong>Enable/Disable Wi-Fi</strong> toggles the radio itself. <strong>Scan for Networks</strong> lists nearby SSIDs with signal strength and security type &mdash; click <strong>Use</strong> on one to fill in its SSID, then enter the password and <strong>Connect</strong>. You can also just type an SSID directly if it's hidden or out of range of the scan.</p>
+      </div>
+      <div class="callout tip">
+        <span class="mark">Under the hood</span>
+        <p>The app itself runs as an unprivileged system account. Wi-Fi changes go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
       </div>
     </section>
 
@@ -639,6 +661,22 @@ Enter port number (or "q" to quit): <span class="c2">1</span></pre>
       <p>Users with a <em>default port</em> assigned never see the picker menu &mdash; that's deliberate, since they're meant to only ever reach one thing. If that port has been deleted, can't be opened, or drops mid-session, you're disconnected with a clear reason instead of being handed a menu you were never meant to see.</p>
     </section>
 
+    <section id="connecting-web">
+      <h2>Connecting over the Web</h2>
+      <p class="lede">The same console users can also get a serial console straight in the browser &mdash; no SSH client needed.</p>
+      <p>Visit <code>https://terminalserver.local:8443/terminal</code> (or the Pi's IP) and sign in with a console-user username and password &mdash; the same accounts from the <a href="#tab-users">Users tab</a>, not an admin account. This is a separate login from the admin UI, even if you're already signed in there.</p>
+      <ul>
+        <li>A user with a <strong>default port</strong> assigned connects straight to it, same as over SSH.</li>
+        <li>A user without one sees a port picker in the browser instead (only if the port picker is enabled on the <a href="#tab-server">Server tab</a>).</li>
+        <li><strong>Read-only</strong> users and read-only/shared port access modes are enforced exactly as they are over SSH &mdash; see <a href="#access-modes">Access modes &amp; permissions</a>.</li>
+        <li><strong>Disconnect</strong> ends the session and returns to the login screen.</li>
+      </ul>
+      <div class="callout tip">
+        <span class="mark">SSH still works</span>
+        <p>The web console is an additional way in, not a replacement &mdash; the same users can keep connecting over SSH on port 2222 exactly as before.</p>
+      </div>
+    </section>
+
     <section id="access-modes">
       <h2>Access modes &amp; permissions</h2>
       <p class="lede">Two independent settings decide who can type on a given connection: the <strong>port's</strong> access mode, and the <strong>user's</strong> permission. Both have to allow writing for a session to actually be able to type &mdash; either one set to read-only wins.</p>
@@ -723,6 +761,14 @@ tftp terminalserver.local
             <tr>
               <td>Locked out of the web admin UI</td>
               <td>There's no self-service reset. Someone with SSH access to the Pi (port 22) can delete <code>/opt/terminalserver/data/config.json</code>'s <code>web</code> section values or restore from a backup to re-trigger setup &mdash; back up that file once you've configured things.</td>
+            </tr>
+            <tr>
+              <td>Can't log into <code>/terminal</code> with an admin account</td>
+              <td>Expected &mdash; the web console only accepts the console users from the <a href="#tab-users">Users tab</a>, the same ones SSH uses. It's a separate login from the admin UI on purpose.</td>
+            </tr>
+            <tr>
+              <td>Wi-Fi radio won't turn on, or Connect fails</td>
+              <td>Confirm the Pi has Wi-Fi hardware and NetworkManager is managing it (<code>nmcli device status</code> over SSH on port 22). If the sudoers rule failed validation during setup (see <code>/opt/terminalserver/data/setup.log</code>), Wi-Fi control is unavailable until that's fixed.</td>
             </tr>
           </tbody>
         </table>

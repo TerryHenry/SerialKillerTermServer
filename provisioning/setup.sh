@@ -87,6 +87,21 @@ if ! id -u terminalserver >/dev/null 2>&1; then
   useradd --system --home-dir "$APP_DIR" --shell /usr/sbin/nologin --groups dialout terminalserver
 fi
 
+echo "Granting the service account scoped permission to manage Wi-Fi..."
+chmod +x "$APP_DIR/provisioning/wifi-helper.sh"
+SUDOERS_FILE=/etc/sudoers.d/terminalserver-wifi
+SUDOERS_TMP=$(mktemp)
+echo "terminalserver ALL=(root) NOPASSWD: $APP_DIR/provisioning/wifi-helper.sh" > "$SUDOERS_TMP"
+# Validate before installing -- sudo reads the *whole* sudoers config atomically, so a
+# malformed drop-in here can silently break sudo for the entire system, not just this
+# rule. Never place an unvalidated file into /etc/sudoers.d/.
+if visudo -c -f "$SUDOERS_TMP" >/dev/null 2>&1; then
+  install -m 440 "$SUDOERS_TMP" "$SUDOERS_FILE"
+else
+  echo "WARNING: generated sudoers rule failed validation -- Wi-Fi control will be unavailable" >&2
+fi
+rm -f "$SUDOERS_TMP"
+
 cd "$APP_DIR" || exit 1
 retry npm install --omit=dev --no-audit --no-fund
 if [ $? -ne 0 ]; then

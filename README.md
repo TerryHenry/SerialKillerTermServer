@@ -38,6 +38,16 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 - **Dashboard tab** — live CPU, memory, and disk usage, total connected
   clients, and a live status (present/missing) and client count for every
   configured serial port.
+- **Network tab** — shows every network interface's status, IP address, and
+  connection name (via NetworkManager), plus this Pi's public IP if it has
+  internet access. Also enables/disables the Wi-Fi radio and joins a Wi-Fi
+  network (scan or type an SSID + password) directly from the admin UI.
+- **Web-based serial console** (`https://<pi>:8443/terminal`) — the same
+  users configured in the Users tab can also get a serial console straight
+  in the browser (xterm.js, no extra software), alongside SSH access. Users
+  with a dedicated assigned port connect straight to it; others pick from
+  the same port menu SSH users get. Read-only users and read-only/shared
+  port access modes are enforced identically to the SSH path.
 - **Audit log** — admin actions (settings changes, port/user/admin
   create/delete, backup restores, TFTP file changes) are recorded, tagged
   with who did it, right alongside the rest of the server's activity log.
@@ -120,3 +130,9 @@ its own first-boot provisioning.
   own certificate.
 - Re-running `build-image.sh` is safe — it strips any previously injected
   `cmdline.txt` trigger before adding its own.
+- Wi-Fi control relies on Raspberry Pi OS Bookworm's default NetworkManager
+  (`nmcli`) stack. The unprivileged `terminalserver` service account is
+  granted a narrowly-scoped, validated `sudoers.d` rule during setup that
+  lets it run exactly one fixed helper script
+  (`provisioning/wifi-helper.sh`) as root — never a raw shell or arbitrary
+  `nmcli` invocation.
