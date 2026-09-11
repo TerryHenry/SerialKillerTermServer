@@ -87,20 +87,30 @@ if ! id -u terminalserver >/dev/null 2>&1; then
   useradd --system --home-dir "$APP_DIR" --shell /usr/sbin/nologin --groups dialout terminalserver
 fi
 
-echo "Granting the service account scoped permission to manage Wi-Fi..."
-chmod +x "$APP_DIR/provisioning/wifi-helper.sh"
-SUDOERS_FILE=/etc/sudoers.d/terminalserver-wifi
+echo "Granting the service account scoped permission to manage Wi-Fi, DNS, NTP, and timezone..."
+chmod +x "$APP_DIR/provisioning/system-helper.sh"
+SUDOERS_FILE=/etc/sudoers.d/terminalserver-system
 SUDOERS_TMP=$(mktemp)
-echo "terminalserver ALL=(root) NOPASSWD: $APP_DIR/provisioning/wifi-helper.sh" > "$SUDOERS_TMP"
+echo "terminalserver ALL=(root) NOPASSWD: $APP_DIR/provisioning/system-helper.sh" > "$SUDOERS_TMP"
 # Validate before installing -- sudo reads the *whole* sudoers config atomically, so a
 # malformed drop-in here can silently break sudo for the entire system, not just this
 # rule. Never place an unvalidated file into /etc/sudoers.d/.
 if visudo -c -f "$SUDOERS_TMP" >/dev/null 2>&1; then
   install -m 440 "$SUDOERS_TMP" "$SUDOERS_FILE"
 else
-  echo "WARNING: generated sudoers rule failed validation -- Wi-Fi control will be unavailable" >&2
+  echo "WARNING: generated sudoers rule failed validation -- Wi-Fi/DNS/NTP/timezone control will be unavailable" >&2
 fi
 rm -f "$SUDOERS_TMP"
+
+# Seed the default NTP server (pool.ntp.org) on first boot only -- guarded so re-running
+# this idempotent setup script (it retries on every boot until it succeeds) never clobbers
+# an admin's own choice made afterward from the Network tab.
+if [ ! -f /etc/systemd/timesyncd.conf.d/50-terminalserver.conf ]; then
+  echo "Setting default NTP server (pool.ntp.org)..."
+  mkdir -p /etc/systemd/timesyncd.conf.d
+  printf '[Time]\nNTP=pool.ntp.org\n' > /etc/systemd/timesyncd.conf.d/50-terminalserver.conf
+  systemctl restart systemd-timesyncd || true
+fi
 
 cd "$APP_DIR" || exit 1
 retry npm install --omit=dev --no-audit --no-fund

@@ -52,6 +52,19 @@
     </form>
   </div>
 
+  <!-- Second factor: shown after a correct password when the account has 2FA enabled -->
+  <div class="auth-screen" id="totpScreen">
+    <form class="auth-card" id="totpForm">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Two-Factor Authentication</h1>
+      <p class="hint">Enter the 6-digit code from your authenticator app.</p>
+      <label>Code</label>
+      <input type="text" id="totpCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required />
+      <div class="auth-error" id="totpError"></div>
+      <button type="submit" class="primary">Verify</button>
+    </form>
+  </div>
+
   <!-- Main app -->
   <div class="app" id="appRoot">
     <div class="titlebar">
@@ -226,6 +239,32 @@
         </div>
         <div class="auth-error" id="wifiMsg"></div>
       </div>
+
+      <div class="panel">
+        <h2>Time &amp; DNS</h2>
+        <div class="field-row">
+          <label for="ntpServer">NTP Server</label>
+          <input type="text" id="ntpServer" placeholder="pool.ntp.org" autocomplete="off" />
+          <span class="status-pill" id="ntpSyncPill">
+            <span class="dot"></span>
+            <span id="ntpSyncText">Unknown</span>
+          </span>
+          <button id="saveNtpBtn">Save</button>
+        </div>
+        <div class="field-row">
+          <label for="timezoneInput">Timezone</label>
+          <select id="timezoneInput"></select>
+          <button id="saveTimezoneBtn">Save</button>
+        </div>
+        <div class="field-row">
+          <label for="dnsServers">DNS Servers</label>
+          <input type="text" id="dnsServers" placeholder="e.g. 1.1.1.1, 8.8.8.8" autocomplete="off" />
+          <button id="saveDnsBtn">Save</button>
+          <button id="clearDnsBtn" class="secondary">Use DHCP</button>
+        </div>
+        <p class="hint">IPv4 addresses only. DNS Servers shows what's currently in effect. Leave it as-is (or click Use DHCP) to keep using whatever your network hands out automatically.</p>
+        <div class="auth-error" id="timeDnsMsg"></div>
+      </div>
     </div>
 
     <div class="tab-content" id="tab-ports">
@@ -293,7 +332,14 @@
           <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
-        <button id="addUserBtn">+ Add User</button>
+        <div class="field-row">
+          <button id="addUserBtn">+ Add User</button>
+          <input type="file" id="importUsersInput" accept=".csv,text/csv" hidden />
+          <button id="importUsersBtn" class="secondary">Import from CSV&hellip;</button>
+          <button id="downloadUserTemplateBtn" class="secondary">Download CSV Template</button>
+        </div>
+        <p class="hint">CSV columns: <code>username, password, authMethod, permission, defaultPort, publicKey</code>. <code>authMethod</code> is <code>password</code>/<code>publickey</code>/<code>both</code> (guessed from which fields are filled in if left blank); <code>permission</code> is <code>read-write</code>/<code>read-only</code> (defaults to read-write); <code>defaultPort</code> matches a port's label. Only creates new accounts &mdash; a username that already exists is skipped, never overwritten.</p>
+        <div class="auth-error" id="importUsersMsg"></div>
       </div>
     </div>
 
@@ -301,7 +347,7 @@
       <div class="panel">
         <h2>Active Sessions</h2>
         <table class="data-table" id="sessionsTable">
-          <thead><tr><th>User</th><th>Connected To</th><th>Since</th><th>Access</th><th></th></tr></thead>
+          <thead><tr><th>User</th><th>Method</th><th>Connected To</th><th>Since</th><th>Access</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -333,9 +379,53 @@
       </div>
 
       <div class="panel">
+        <h2>Two-Factor Authentication</h2>
+        <p class="hint">Adds a second step at login: a 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password, etc.), on top of your password. Optional, off by default.</p>
+        <div class="field-row">
+          <span>Status</span>
+          <span class="status-pill" id="totpStatusPill">
+            <span class="dot"></span>
+            <span id="totpStatusText">Disabled</span>
+          </span>
+          <button id="enableTotpBtn" class="primary">Enable 2FA</button>
+          <button id="disableTotpBtn" class="danger" hidden>Disable 2FA</button>
+        </div>
+
+        <div id="totpSetupPanel" hidden>
+          <p class="hint">Scan this with your authenticator app, or enter the code manually.</p>
+          <div id="totpQrContainer"></div>
+          <div class="field-row column">
+            <label>Manual entry code</label>
+            <code id="totpSecretText"></code>
+          </div>
+          <div class="field-row column">
+            <label for="totpConfirmCode">Enter the 6-digit code to confirm</label>
+            <input type="text" id="totpConfirmCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
+          </div>
+          <div class="field-row">
+            <button id="confirmTotpBtn" class="primary">Confirm &amp; Enable</button>
+            <button id="cancelTotpSetupBtn" class="secondary">Cancel</button>
+          </div>
+        </div>
+
+        <div id="totpDisablePanel" hidden>
+          <div class="field-row column">
+            <label for="totpDisableCode">Enter your current 6-digit code to disable 2FA</label>
+            <input type="text" id="totpDisableCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
+          </div>
+          <div class="field-row">
+            <button id="confirmDisableTotpBtn" class="danger">Confirm Disable</button>
+            <button id="cancelTotpDisableBtn" class="secondary">Cancel</button>
+          </div>
+        </div>
+
+        <div class="auth-error" id="totpSetupMsg"></div>
+      </div>
+
+      <div class="panel">
         <h2>Admin Accounts</h2>
         <table class="data-table" id="adminsTable">
-          <thead><tr><th>Username</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Username</th><th>Status</th><th>2FA</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <button id="addAdminBtn">+ Add Admin</button>
@@ -352,6 +442,11 @@
         <p>For comments and suggestions, email <a href="mailto:skterminalserver@gmail.com">skterminalserver@gmail.com</a></p>
         <button id="checkUpdateBtn">Check for Updates</button>
         <p class="hint" id="updateStatus"></p>
+        <div class="field-row">
+          <button id="applyUpdateBtn" class="primary" hidden>Apply Update</button>
+          <button id="rollbackUpdateBtn" class="danger" hidden>Roll Back to Previous Version</button>
+        </div>
+        <p class="hint" id="updateProgress"></p>
         <p><a href="https://github.com/TerryHenry/SerialKillerTermServer/releases" target="_blank" rel="noopener">View all releases on GitHub</a></p>
       </div>
     </div>
@@ -486,6 +581,7 @@
     </div>
   </div>
 
+  <script type="module" src="qrcode-bridge.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

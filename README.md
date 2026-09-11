@@ -40,6 +40,19 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   (password and/or SSH public-key auth), SSH server settings, TFTP, and view
   live sessions/logs. Supports multiple admin accounts (not just one shared
   login), and login attempts are throttled after repeated failures.
+  Optional TOTP-based two-factor authentication (Google Authenticator,
+  Authy, 1Password, etc.) can be turned on per admin account from My
+  Account — off by default.
+- **Bulk user import** — add a whole roster of console accounts at once
+  from a CSV file (Users tab), instead of one-by-one through the form.
+  Only ever creates new accounts; a username that already exists is
+  skipped, never overwritten.
+- **In-place updates** — the About tab's Apply Update button patches a
+  running Pi to a newer release (small app-only download, not a
+  multi-gigabyte image) instead of requiring a full SD card re-flash.
+  Checksum-verified, syntax-checked, and backed up before anything live is
+  touched; one click rolls back if you change your mind. See
+  [Applying updates](#applying-updates) below.
 - **Dashboard tab** — live CPU, memory, and disk usage, total connected
   clients, and a live status (present/missing) and client count for every
   configured serial port.
@@ -47,6 +60,9 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   connection name (via NetworkManager), plus this Pi's public IP if it has
   internet access. Also enables/disables the Wi-Fi radio and joins a Wi-Fi
   network (scan or type an SSID + password) directly from the admin UI.
+  Also sets the **NTP server** (defaults to `pool.ntp.org`, with a live
+  synced/not-synced status), the **timezone**, and a **DNS override** (or
+  hand DNS back to whatever DHCP provides).
 - **Web-based serial console** (`https://<pi>:8443/terminal`) — the same
   users configured in the Users tab can also get a serial console straight
   in the browser (xterm.js, no extra software), alongside SSH access. Users
@@ -58,13 +74,20 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   Stop/Start button there persists (unlike a plain "stop," a disabled
   server stays disabled across a reboot instead of coming back via
   auto-start).
+- **Sessions tab** — every active session across *both* access channels, SSH
+  and the web console, in one list, tagged with a Method column so you can
+  tell them apart. Disconnect works the same way regardless of which
+  channel a session came in on.
 - **Audit log** — admin actions (settings changes, port/user/admin
   create/delete, backup restores, TFTP file changes) are recorded, tagged
   with who did it, right alongside the rest of the server's activity log.
 - **Backup &amp; restore** — export the full config (ports, users, admin
   accounts, settings) as a single file and restore it later, optionally
   including the SSH host key so a restore reproduces the same host-key
-  fingerprint instead of minting a new device identity.
+  fingerprint instead of minting a new device identity. Also covers the
+  NTP server, timezone, and DNS override, since those live outside
+  `config.json` entirely (Wi-Fi credentials are deliberately not included —
+  NetworkManager doesn't expose a saved password through a normal read).
 - **TFTP server** (default port `69`, off by default) — start/stop from the
   TFTP tab in the admin UI. Serves and accepts files (if uploads are
   enabled) from `/opt/terminalserver/data/tftp`, e.g. for pushing firmware
@@ -120,6 +143,45 @@ its own first-boot provisioning.
    UI), and it won't accept the default password as the replacement. Once
    changed, configure serial ports and users as normal.
 
+## Applying updates
+
+Once a Pi is flashed and running, later releases (that publish an in-place
+update package — see "Publishing a release" below) can be applied directly
+from the admin UI instead of re-flashing:
+
+1. About tab → **Check for Updates**.
+2. If a newer version is available and publishes an update package, an
+   **Apply Update** button appears. Confirming it downloads (~a few hundred
+   KB, not the full image), checksum-verifies, syntax-checks, and installs
+   dependencies for the new version in a staging area — all before the
+   running service is touched — then backs up the current version, swaps
+   in the new one, and restarts.
+3. The page reconnects and reloads on its own once the service is back
+   (a few seconds; active SSH/web-console sessions disconnect, same as any
+   restart). **Roll Back to Previous Version** undoes the most recent
+   update the same way, in reverse.
+
+If the new version won't even start, `terminalserver.service` gives up
+after 3 failed restarts within 60 seconds (rather than crash-looping), and
+`sudo bash /opt/terminalserver/provisioning/rollback-update.sh` over SSH
+restores the backup independently of whether the app is running at all.
+
+### Publishing a release
+
+For a release to be self-update-capable, its GitHub Release needs two
+extra assets alongside the image — `build-image.sh` generates both in
+`build/`:
+
+- `terminalserver-app.tar.gz` — the app-only tarball (`server.js`,
+  `package.json`/`package-lock.json`, `lib/`, `webui/`, `provisioning/`,
+  no `node_modules`) that gets applied in place.
+- `terminalserver-app.tar.gz.sha256` — its checksum. The updater refuses to
+  apply a download that doesn't match this exactly.
+
+Releases published without these two files still show up in **Check for
+Updates** (so admins know a newer version exists), just without an
+**Apply Update** button — re-flashing is the only option for those.
+
 ## Notes / limitations
 
 - The admin web UI's TLS certificate is self-signed and generated locally on
@@ -128,14 +190,38 @@ its own first-boot provisioning.
   own certificate.
 - Re-running `build-image.sh` is safe — it strips any previously injected
   `cmdline.txt` trigger before adding its own.
-- Wi-Fi control relies on Raspberry Pi OS Bookworm's default NetworkManager
-  (`nmcli`) stack. The unprivileged `terminalserver` service account is
-  granted a narrowly-scoped, validated `sudoers.d` rule during setup that
-  lets it run exactly one fixed helper script
-  (`provisioning/wifi-helper.sh`) as root — never a raw shell or arbitrary
-  `nmcli` invocation. `terminalserver.service` intentionally carries no
-  `CapabilityBoundingSet` restriction, because that setting applies to the
-  whole process tree including the `sudo` child the app shells out to —
-  a narrow bounding set breaks sudo's own root transition outright (`sudo:
-  unable to change to root gid: Operation not permitted`). The actual
-  privilege boundary is the sudoers rule, not the capability set.
+- Wi-Fi, DNS, NTP, and timezone control rely on Raspberry Pi OS Bookworm's
+  default NetworkManager (`nmcli`) and `systemd-timesyncd`/`timedatectl`
+  stacks. The unprivileged `terminalserver` service account is granted a
+  narrowly-scoped, validated `sudoers.d` rule during setup that lets it run
+  exactly one fixed helper script (`provisioning/system-helper.sh`) as root
+  — never a raw shell or arbitrary command. `terminalserver.service`
+  intentionally carries no `CapabilityBoundingSet` restriction, because that
+  setting applies to the whole process tree including the `sudo` child the
+  app shells out to — a narrow bounding set breaks sudo's own root
+  transition outright (`sudo: unable to change to root gid: Operation not
+  permitted`). The actual privilege boundary is the sudoers rule, not the
+  capability set.
+- The in-place updater keeps this same narrow-privilege model: everything
+  through staging, syntax-checking, `npm install`, and backup runs
+  unprivileged as the `terminalserver` account (which already owns
+  `/opt/terminalserver`) — the sudoers helper is only ever called for the
+  final `systemctl restart terminalserver.service`, and only after
+  everything else has already succeeded.
+- A DNS override is applied to every currently-active NetworkManager
+  connection (not just one), so it holds regardless of which interface,
+  Ethernet or Wi-Fi, ends up carrying traffic. The Network tab's DNS field
+  always reflects what's actually in effect (read from `/etc/resolv.conf`),
+  whether that came from DHCP or an override set here.
+- Two-factor auth (TOTP) is implemented in-house against RFC 4226/6238
+  directly on Node's built-in `crypto` (`lib/totp.js`, verified against the
+  official RFC 4226 test vectors) rather than pulling in a dependency for
+  it. Lost your authenticator device with no other admin account to help?
+  Same recovery path as a lost admin password: edit
+  `/opt/terminalserver/data/config.json` over SSH on port 22 (clear that
+  admin's `totpEnabled`/`totpSecret`) and restart the service.
+- `npm audit` is clean except one moderate `qs`/`express` advisory that
+  can't be resolved without a major Express 4→5 upgrade — a bigger, separate
+  effort given how much routing/middleware behavior a major version bump
+  touches. Everything else (including the `multer` DoS advisories) is
+  patched.

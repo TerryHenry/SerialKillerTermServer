@@ -432,7 +432,7 @@
 
     <section id="overview">
       <h2>Overview</h2>
-      <p class="lede">Serial Killer Terminal Server turns a Raspberry Pi into a console server &mdash; the kind of appliance you'd otherwise buy as a Digi PortServer or Opengear box. Plug in one or more USB-serial adapters, wire them to routers, switches, lab equipment, or anything else with a serial console port, and it lets your team reach any of them over SSH instead of walking over with a laptop and a cable.</p>
+      <p class="lede">Serial Killer Terminal Server turns a Raspberry Pi into a console server &mdash; a dedicated appliance for serial console access, the kind you'd otherwise have to buy pre-built. Plug in one or more USB-serial adapters, wire them to routers, switches, lab equipment, or anything else with a serial console port, and it lets your team reach any of them over SSH instead of walking over with a laptop and a cable.</p>
       <p class="lede">Two interfaces make up the appliance: a <strong>web admin UI</strong> for configuration, and an <strong>SSH server</strong> that end users actually connect through to reach a serial port. They're independent &mdash; you don't need a web-UI account to use SSH, and SSH users never see the admin UI.</p>
       <div class="callout tip">
         <span class="mark">No hard limits</span>
@@ -517,9 +517,9 @@
       </div>
       <div class="card">
         <h4>Backup &amp; Restore</h4>
-        <p><strong>Download Backup</strong> saves everything in the app's config &mdash; SSH/TFTP/web settings, serial ports, users, and admin accounts, including password hashes and public keys &mdash; as a single JSON file.</p>
+        <p><strong>Download Backup</strong> saves everything in the app's config &mdash; SSH/TFTP/web/Network settings, serial ports, users, and admin accounts, including password hashes and public keys &mdash; as a single JSON file. It also captures the NTP server, timezone, and DNS override, since those live outside <code>config.json</code> (systemd-timesyncd, <code>timedatectl</code>, and NetworkManager keep their own state). Wi-Fi credentials are the one thing deliberately left out &mdash; NetworkManager doesn't hand back a saved password through a normal read.</p>
         <p><strong>Include SSH host key</strong> (off by default) additionally embeds the Pi's SSH private host key in the backup. With it, restoring reproduces this device exactly, including the same host-key fingerprint, so existing users don't get a "host key changed" warning after a re-flash or SD card recovery. Without it, restoring still works fine, but the Pi gets a fresh host key identity.</p>
-        <p><strong>Restore from Backup</strong> replaces the <em>entire</em> current configuration with the contents of a chosen backup file, after a confirmation prompt &mdash; there's no partial or selective restore. The page reloads automatically once it's done; a restored host key takes effect after the service is restarted.</p>
+        <p><strong>Restore from Backup</strong> replaces the <em>entire</em> current configuration with the contents of a chosen backup file, after a confirmation prompt &mdash; there's no partial or selective restore. The page reloads automatically once it's done; a restored host key takes effect after the service is restarted. NTP/timezone/DNS are applied best-effort after everything else succeeds &mdash; if one of them fails (e.g. an unrecognized timezone name from a very old backup), you'll see exactly which one in a warning, without the rest of the restore being affected.</p>
       </div>
       <div class="callout warn">
         <span class="mark">Handle with care</span>
@@ -541,9 +541,17 @@
         <h4>Wi-Fi</h4>
         <p><strong>Enable/Disable Wi-Fi</strong> toggles the radio itself. <strong>Scan for Networks</strong> lists nearby SSIDs with signal strength and security type &mdash; click <strong>Use</strong> on one to fill in its SSID, then enter the password and <strong>Connect</strong>. You can also just type an SSID directly if it's hidden or out of range of the scan.</p>
       </div>
+      <div class="card">
+        <h4>Time &amp; DNS</h4>
+        <ul>
+          <li><strong>NTP Server</strong> &mdash; defaults to <code>pool.ntp.org</code>. The pill next to it shows whether the clock is currently synced.</li>
+          <li><strong>Timezone</strong> &mdash; a dropdown of the full IANA timezone list (e.g. <code>America/New_York</code>); type a few letters while it's focused to jump straight to a match.</li>
+          <li><strong>DNS Servers</strong> &mdash; IPv4 addresses only. Shows what's actually in effect right now, whether that's from DHCP or a previous override. Enter one or more servers (comma or space separated) and <strong>Save</strong> to override, or click <strong>Use DHCP</strong> to go back to whatever the network hands out automatically.</li>
+        </ul>
+      </div>
       <div class="callout tip">
         <span class="mark">Under the hood</span>
-        <p>The app itself runs as an unprivileged system account. Wi-Fi changes go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
+        <p>The app itself runs as an unprivileged system account. Wi-Fi, DNS, NTP, and timezone changes all go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
       </div>
     </section>
 
@@ -596,6 +604,24 @@
           <li><strong>Default port</strong> &mdash; assign one and the user is dropped straight into it on login, no menu, ever. Leave it unset and they see the port picker (if it's enabled) instead.</li>
         </ul>
       </div>
+      <div class="card">
+        <h4>Import from CSV</h4>
+        <p><strong>Import from CSV&hellip;</strong> bulk-creates accounts from a spreadsheet instead of adding them one at a time &mdash; handy for provisioning a whole class or team roster at once. <strong>Download CSV Template</strong> gives you a starting file with the right headers and a couple of example rows.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>username</code></td><td>Required.</td></tr>
+              <tr><td><code>password</code></td><td>Required unless <code>authMethod</code> is <code>publickey</code>.</td></tr>
+              <tr><td><code>authMethod</code></td><td><code>password</code> / <code>publickey</code> / <code>both</code>. Left blank, it's guessed from whichever of <code>password</code>/<code>publicKey</code> is filled in.</td></tr>
+              <tr><td><code>permission</code></td><td><code>read-write</code> / <code>read-only</code>. Defaults to <code>read-write</code>.</td></tr>
+              <tr><td><code>defaultPort</code></td><td>Matches a port by its <strong>label</strong> (not device path). Leave blank for the port picker.</td></tr>
+              <tr><td><code>publicKey</code></td><td>Required unless <code>authMethod</code> is <code>password</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Only ever <em>creates</em> accounts &mdash; a row naming a username that already exists is skipped, not overwritten, so re-running an import (or a typo'd re-upload) can't silently reset anyone's credentials. After it runs, you'll see exactly which rows were created and which were skipped, and why.</p>
+      </div>
     </section>
 
     <section id="tab-sessions">
@@ -603,7 +629,7 @@
       <div class="tab-grid">
         <div class="card">
           <h4>Sessions</h4>
-          <p>Everyone currently connected, which port they're on, and since when. <strong>Disconnect</strong> ends a session immediately &mdash; useful if someone's connection is stuck holding an exclusive port open.</p>
+          <p>Everyone currently connected across <em>both</em> access channels &mdash; SSH and the web console &mdash; in one list: which <strong>Method</strong> they came in on, which port they're on, and since when. <strong>Disconnect</strong> ends a session immediately regardless of channel &mdash; useful if someone's connection is stuck holding an exclusive port open.</p>
         </div>
         <div class="card">
           <h4>Log</h4>
@@ -618,6 +644,15 @@
       <div class="card">
         <h4>My Account</h4>
         <p>Change your own password here at any time &mdash; independent of the forced first-login change covered earlier.</p>
+      </div>
+      <div class="card">
+        <h4>Two-Factor Authentication</h4>
+        <p>Optional, off by default, per admin account. Once on, logging in needs a password <em>and</em> a fresh 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password, and similar all work &mdash; anything that speaks standard TOTP).</p>
+        <ul>
+          <li><strong>Enable 2FA</strong> shows a QR code and a manual-entry secret. Scan it (or type the secret in by hand), then enter the code your app generates to confirm &mdash; it only actually turns on once that first code checks out, so a botched scan can't lock you out immediately.</li>
+          <li><strong>Disable 2FA</strong> asks for a current code before it takes effect, the same as enabling does.</li>
+          <li>The <strong>Admin Accounts</strong> table below shows a 2FA column so you can see at a glance which admins have it on.</li>
+        </ul>
       </div>
       <div class="card">
         <h4>Admin Accounts</h4>
@@ -637,7 +672,28 @@
       <div class="card">
         <h4>Version &amp; Check for Updates</h4>
         <p>The version shown here comes straight from the running app (<code>package.json</code>), not a hardcoded label, so it can't drift out of sync with what's actually installed.</p>
-        <p><strong>Check for Updates</strong> asks GitHub for this repo's latest published release and compares it to the running version, reporting one of: up to date, an update is available (with a link to it), or no releases published yet. This only checks and reports &mdash; it doesn't download or install anything, so there's no risk in clicking it.</p>
+        <p><strong>Check for Updates</strong> asks GitHub for this repo's latest published release and compares it to the running version, reporting one of: up to date, an update is available, or no releases published yet. This only checks and reports &mdash; it doesn't download or install anything, so there's no risk in clicking it.</p>
+      </div>
+      <div class="card">
+        <h4>Apply Update</h4>
+        <p>When a newer release publishes an in-place update package, <strong>Check for Updates</strong> also shows an <strong>Apply Update</strong> button &mdash; a small (roughly half a megabyte) app-only download, not the multi-gigabyte full image. It patches the running install instead of re-flashing the SD card. Confirming it:</p>
+        <ol class="steps">
+          <li>Downloads the new version and verifies its checksum against the one published alongside it &mdash; a corrupted or tampered download is refused outright, before anything on the Pi is touched.</li>
+          <li>Extracts it to a staging area and syntax-checks every file, then installs its dependencies there &mdash; still without touching the live app.</li>
+          <li>Only once all of that passes: backs up the current version, swaps the new one in, and restarts the service.</li>
+        </ol>
+        <p>The restart takes a few seconds and disconnects active SSH and web console sessions, same as a manual restart would. Watch the <a href="#tab-sessions">Log tab</a> for live progress up until the restart; the page then waits for the service to come back and reloads itself automatically.</p>
+        <p>Config, serial port settings, users, and admin accounts are all untouched by an update &mdash; only the application code changes.</p>
+      </div>
+      <div class="card">
+        <h4>Roll Back to Previous Version</h4>
+        <p>Appears once a backup exists from a prior update. Restores it and restarts the service, the same way <strong>Apply Update</strong> does in reverse &mdash; use it if the new version applied fine but you don't want it. Only the single most recent pre-update backup is kept (each new update replaces it), so this undoes the <em>last</em> update, not an arbitrary earlier one.</p>
+      </div>
+      <div class="callout warn">
+        <span class="mark">If the service won't come back at all</span>
+        <p>The button-based rollback above needs the app itself to be healthy enough to respond &mdash; no good if the new version won't even start. For that case, SSH in on port 22 and run:</p>
+        <pre class="term">sudo bash /opt/terminalserver/provisioning/rollback-update.sh</pre>
+        <p>It restores the same backup independently of whether the app is running at all. <code>terminalserver.service</code> also gives up after 3 failed starts within 60 seconds rather than crash-looping forever, so a badly broken update fails cleanly instead of hammering the Pi.</p>
       </div>
     </section>
 
@@ -740,7 +796,11 @@ tftp terminalserver.local
       </div>
       <div class="card">
         <h4>The web login locks out after repeated failures</h4>
-        <p>Five failed attempts for a given username from a given address lock that pair out for five minutes &mdash; even a subsequently-correct password is rejected until the lockout clears. Basic brute-force protection, tracked in memory only, so it resets on a service restart.</p>
+        <p>Five failed attempts for a given username from a given address lock that pair out for five minutes &mdash; even a subsequently-correct password is rejected until the lockout clears. Basic brute-force protection, tracked in memory only, so it resets on a service restart. The same throttling applies separately to guessing a 6-digit 2FA code once a password has already checked out.</p>
+      </div>
+      <div class="card">
+        <h4>Turn on two-factor authentication</h4>
+        <p>Especially worth doing on any admin account reachable beyond your own LAN &mdash; see <a href="#tab-admin">My Account</a>. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
       </div>
     </section>
 
@@ -771,8 +831,20 @@ tftp terminalserver.local
               <td>There's no self-service reset. Someone with SSH access to the Pi (port 22) can delete <code>/opt/terminalserver/data/config.json</code>'s <code>web</code> section values or restore from a backup to re-trigger setup &mdash; back up that file once you've configured things.</td>
             </tr>
             <tr>
+              <td>Lost your 2FA device, can't get past the code prompt</td>
+              <td>2FA is self-service by design &mdash; only the account owner can turn it on or off, even another admin can't do it for you. Recovery is the same SSH-based fix as a lost admin password: over SSH on port 22, edit <code>/opt/terminalserver/data/config.json</code> and set that admin's <code>totpEnabled</code> to <code>false</code> (and clear <code>totpSecret</code>), then restart <code>terminalserver.service</code>.</td>
+            </tr>
+            <tr>
               <td>Can't log into <code>/terminal</code> with an admin account</td>
               <td>Expected &mdash; the web console only accepts the console users from the <a href="#tab-users">Users tab</a>, the same ones SSH uses. It's a separate login from the admin UI on purpose.</td>
+            </tr>
+            <tr>
+              <td>No <strong>Apply Update</strong> button even though a newer version exists</td>
+              <td>That release doesn't publish an in-place update package (common for releases from before this feature existed). Re-flash the SD card with the new image instead.</td>
+            </tr>
+            <tr>
+              <td>Page never comes back after clicking <strong>Apply Update</strong></td>
+              <td>It waits up to 3 minutes, which covers a normal download + dependency install + restart. Past that, SSH in on port 22 and check <code>systemctl status terminalserver</code> &mdash; see <a href="#tab-about">Apply Update</a> above for the manual rollback command if it won't start.</td>
             </tr>
             <tr>
               <td>Wi-Fi radio won't turn on, or Connect fails</td>

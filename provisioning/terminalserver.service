@@ -1,6 +1,11 @@
 [Unit]
 Description=Serial Killer Terminal Server (SSH-to-serial console server)
 After=network.target
+# If a bad update (or anything else) leaves the app crashing on startup, give up after 3
+# restarts within 60s instead of crash-looping forever -- the unit ends up "failed" and
+# stays there for an admin to investigate over SSH, rather than spinning indefinitely.
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=simple

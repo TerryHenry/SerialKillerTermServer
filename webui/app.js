@@ -49,6 +49,7 @@ function clearFieldError(fieldId) {
 const setupScreen = document.getElementById('setupScreen');
 const loginScreen = document.getElementById('loginScreen');
 const forceChangeScreen = document.getElementById('forceChangeScreen');
+const totpScreen = document.getElementById('totpScreen');
 const appRoot = document.getElementById('appRoot');
 
 // ---------- Auth bootstrap ----------
@@ -56,6 +57,11 @@ async function boot() {
   const session = await api.get('/api/session');
   if (session.needsSetup) {
     show(setupScreen);
+    document.body.classList.remove('app-mode');
+    return;
+  }
+  if (session.needsTotp) {
+    show(totpScreen);
     document.body.classList.remove('app-mode');
     return;
   }
@@ -67,6 +73,18 @@ async function boot() {
   if (session.mustChangePassword) {
     show(forceChangeScreen);
     document.body.classList.remove('app-mode');
+    return;
+  }
+  document.body.classList.add('app-mode');
+  show(appRoot);
+  await initApp();
+}
+
+// Shared by the password-only login and the post-2FA login -- both return the same
+// { mustChangePassword } shape once the session is actually established.
+async function completeLogin(result) {
+  if (result.mustChangePassword) {
+    show(forceChangeScreen);
     return;
   }
   document.body.classList.add('app-mode');
@@ -102,15 +120,29 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       password: document.getElementById('loginPassword').value
     });
     hide(loginScreen);
-    if (result.mustChangePassword) {
-      show(forceChangeScreen);
+    if (result.needsTotp) {
+      document.getElementById('totpCode').value = '';
+      show(totpScreen);
       return;
     }
-    document.body.classList.add('app-mode');
-    show(appRoot);
-    await initApp();
+    await completeLogin(result);
   } catch (err) {
     errorEl.textContent = 'Invalid username or password.';
+  }
+});
+
+document.getElementById('totpForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('totpError');
+  errorEl.textContent = '';
+  try {
+    const result = await api.post('/api/login-totp', { token: document.getElementById('totpCode').value.trim() });
+    hide(totpScreen);
+    await completeLogin(result);
+  } catch (err) {
+    errorEl.textContent = err.message === 'invalid_code' ? 'Wrong code. Try again.' : err.message;
+    document.getElementById('totpCode').value = '';
+    document.getElementById('totpCode').focus();
   }
 });
 
@@ -327,11 +359,48 @@ function setWifiRadioUi(state) {
   btn.disabled = state == null;
 }
 
+// Only marked done once we've actually populated it with a non-empty list, so a failed
+// or empty fetch (e.g. timedatectl unavailable) retries on the next loadNetwork() call
+// instead of leaving the picker permanently empty for the rest of the session.
+let timezonesLoaded = false;
+
+async function loadTimezoneList() {
+  if (timezonesLoaded) return;
+  const zones = await api.get('/api/network/timezones');
+  document.getElementById('timezoneInput').innerHTML = zones
+    .map((z) => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`)
+    .join('');
+  timezonesLoaded = zones.length > 0;
+}
+
+// A plain <select> (not <input list> + <datalist>) so the full list is always visible --
+// a datalist filters its suggestions against whatever the input already contains, which
+// with the current timezone pre-filled meant only that one zone ever showed up.
+function setTimezoneUi(timezone) {
+  const select = document.getElementById('timezoneInput');
+  if (timezone && ![...select.options].some((o) => o.value === timezone)) {
+    select.insertAdjacentHTML('afterbegin', `<option value="${escapeHtml(timezone)}">${escapeHtml(timezone)}</option>`);
+  }
+  select.value = timezone || '';
+}
+
+function setNtpSyncUi(synchronized) {
+  const pill = document.getElementById('ntpSyncPill');
+  const text = document.getElementById('ntpSyncText');
+  pill.classList.toggle('running', synchronized === true);
+  text.textContent = synchronized === true ? 'Synced' : synchronized === false ? 'Not synced' : 'Unknown';
+}
+
 async function loadNetwork() {
   const data = await api.get('/api/network');
   renderNetworkInterfaces(data.interfaces);
   document.getElementById('publicIpValue').textContent = data.publicIp || 'unavailable';
   setWifiRadioUi(data.wifiRadio);
+  document.getElementById('ntpServer').value = data.ntp.server;
+  setNtpSyncUi(data.ntp.synchronized);
+  document.getElementById('dnsServers').value = data.dns.join(', ');
+  await loadTimezoneList();
+  setTimezoneUi(data.timezone);
 }
 
 document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());
@@ -416,6 +485,76 @@ document.getElementById('wifiConnectBtn').addEventListener('click', async (e) =>
   }
 });
 
+document.getElementById('saveNtpBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  const server = document.getElementById('ntpServer').value.trim();
+  if (!server) {
+    msgEl.textContent = 'NTP server is required';
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/ntp', { server });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('saveTimezoneBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  const timezone = document.getElementById('timezoneInput').value.trim();
+  if (!timezone) {
+    msgEl.textContent = 'Timezone is required';
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/timezone', { timezone });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('saveDnsBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/dns', { servers: document.getElementById('dnsServers').value });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('clearDnsBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/dns', { servers: '' });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ---------- Admin password ----------
 document.getElementById('changeAdminPasswordBtn').addEventListener('click', async () => {
   const msg = document.getElementById('adminPasswordMsg');
@@ -439,6 +578,86 @@ document.getElementById('changeAdminPasswordBtn').addEventListener('click', asyn
   }
 });
 
+// ---------- Two-factor auth (My Account) ----------
+function setTotpStatusUi(enabled) {
+  const pill = document.getElementById('totpStatusPill');
+  const text = document.getElementById('totpStatusText');
+  pill.classList.toggle('running', enabled);
+  text.textContent = enabled ? 'Enabled' : 'Disabled';
+  document.getElementById('enableTotpBtn').hidden = enabled;
+  document.getElementById('disableTotpBtn').hidden = !enabled;
+  document.getElementById('totpSetupPanel').hidden = true;
+  document.getElementById('totpDisablePanel').hidden = true;
+}
+
+async function loadTotpStatus() {
+  const session = await api.get('/api/session');
+  setTotpStatusUi(!!session.totpEnabled);
+}
+
+document.getElementById('enableTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('totpSetupMsg');
+  msg.textContent = '';
+  try {
+    const { secret, otpauthUrl } = await api.post('/api/admin-2fa/setup');
+    document.getElementById('totpSecretText').textContent = secret;
+    document.getElementById('totpConfirmCode').value = '';
+    window.renderTotpQr(document.getElementById('totpQrContainer'), otpauthUrl);
+    document.getElementById('totpSetupPanel').hidden = false;
+    document.getElementById('totpDisablePanel').hidden = true;
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('cancelTotpSetupBtn').addEventListener('click', () => {
+  document.getElementById('totpSetupPanel').hidden = true;
+  document.getElementById('totpSetupMsg').textContent = '';
+});
+
+document.getElementById('confirmTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('totpSetupMsg');
+  msg.textContent = '';
+  const token = document.getElementById('totpConfirmCode').value.trim();
+  try {
+    await api.post('/api/admin-2fa/confirm', { token });
+    await loadTotpStatus();
+    await loadAdminsTable();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Two-factor authentication is now enabled.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('disableTotpBtn').addEventListener('click', () => {
+  document.getElementById('totpDisableCode').value = '';
+  document.getElementById('totpDisablePanel').hidden = false;
+  document.getElementById('totpSetupPanel').hidden = true;
+});
+
+document.getElementById('cancelTotpDisableBtn').addEventListener('click', () => {
+  document.getElementById('totpDisablePanel').hidden = true;
+  document.getElementById('totpSetupMsg').textContent = '';
+});
+
+document.getElementById('confirmDisableTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('totpSetupMsg');
+  msg.textContent = '';
+  const token = document.getElementById('totpDisableCode').value.trim();
+  try {
+    await api.post('/api/admin-2fa/disable', { token });
+    await loadTotpStatus();
+    await loadAdminsTable();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Two-factor authentication is now disabled.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
 // ---------- Admin accounts ----------
 async function loadMyUsername() {
   const session = await api.get('/api/session');
@@ -455,9 +674,13 @@ async function loadAdminsTable() {
     const statusPill = a.mustChangePassword
       ? '<span class="pill mute"><span class="dot"></span>Must change password</span>'
       : '<span class="pill ok"><span class="dot"></span>Active</span>';
+    const totpPill = a.totpEnabled
+      ? '<span class="pill ok"><span class="dot"></span>On</span>'
+      : '<span class="pill mute"><span class="dot"></span>Off</span>';
     tr.innerHTML = `
       <td>${escapeHtml(a.username)}${a.isSelf ? ' <span class="hint">(you)</span>' : ''}</td>
       <td>${statusPill}</td>
+      <td>${totpPill}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
@@ -570,11 +793,13 @@ document.getElementById('restoreInput').addEventListener('change', async (e) => 
     const res = await fetch('/api/restore', { method: 'POST', body: formData });
     if (!res.ok) throw await apiError(res);
     const result = await res.json();
-    alert(
-      result.hostKeyRestored
-        ? 'Restore complete, including the SSH host key (takes effect after the service restarts). Reloading.'
-        : 'Restore complete. Reloading.'
-    );
+    let message = result.hostKeyRestored
+      ? 'Restore complete, including the SSH host key (takes effect after the service restarts).'
+      : 'Restore complete.';
+    if (result.systemSettingsWarnings && result.systemSettingsWarnings.length) {
+      message += `\n\nEverything else restored, but these system settings need a look:\n${result.systemSettingsWarnings.join('\n')}`;
+    }
+    alert(`${message} Reloading.`);
     window.location.reload();
   } catch (err) {
     msg.textContent = err.message;
@@ -819,6 +1044,49 @@ function closeUserModal() {
   document.getElementById('userModalBackdrop').classList.remove('open');
 }
 
+document.getElementById('downloadUserTemplateBtn').addEventListener('click', () => {
+  const template =
+    'username,password,authMethod,permission,defaultPort,publicKey\n' +
+    'alice,changeme123,password,read-write,,\n' +
+    'bob,,publickey,read-only,,"ssh-ed25519 AAAA... bob@laptop"\n';
+  const blob = new Blob([template], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'users-template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importUsersBtn').addEventListener('click', () => {
+  document.getElementById('importUsersInput').click();
+});
+
+document.getElementById('importUsersInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const msg = document.getElementById('importUsersMsg');
+  msg.textContent = '';
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await fetch('/api/users/import', { method: 'POST', body: formData });
+    if (!res.ok) throw await apiError(res);
+    const result = await res.json();
+    let summary = `Imported ${result.created.length} user${result.created.length === 1 ? '' : 's'}.`;
+    if (result.skipped.length) {
+      summary +=
+        `\n\nSkipped ${result.skipped.length}:\n` +
+        result.skipped.map((s) => `Row ${s.row} (${s.username}): ${s.reason}`).join('\n');
+    }
+    alert(summary);
+    await loadUsersTable();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
 document.getElementById('addUserBtn').addEventListener('click', () => openUserModal(null));
 document.getElementById('cancelUserBtn').addEventListener('click', closeUserModal);
 document.getElementById('userUsername').addEventListener('input', () => clearFieldError('userUsername'));
@@ -867,6 +1135,11 @@ document.getElementById('saveUserBtn').addEventListener('click', async () => {
 });
 
 // ---------- Sessions ----------
+function methodPill(method) {
+  const isHttps = method === 'https';
+  return `<span class="pill ${isHttps ? 'accent' : 'mute'}"><span class="dot"></span>${isHttps ? 'HTTPS' : 'SSH'}</span>`;
+}
+
 function renderSessions(sessions) {
   const tbody = document.querySelector('#sessionsTable tbody');
   tbody.innerHTML = '';
@@ -875,6 +1148,7 @@ function renderSessions(sessions) {
     const since = new Date(s.connectedAt).toLocaleTimeString();
     tr.innerHTML = `
       <td>${escapeHtml(s.username)}</td>
+      <td>${methodPill(s.method)}</td>
       <td>${s.portLabel ? escapeHtml(s.portLabel) : '<span class="hint">at menu</span>'}</td>
       <td>${since}</td>
       <td>${permissionPill(s.permission)}</td>
@@ -976,7 +1250,9 @@ async function loadVersion() {
 document.getElementById('checkUpdateBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('updateStatus');
   const btn = document.getElementById('checkUpdateBtn');
+  const applyBtn = document.getElementById('applyUpdateBtn');
   btn.disabled = true;
+  applyBtn.hidden = true;
   statusEl.style.color = 'var(--text-dim)';
   statusEl.textContent = 'Checking…';
   try {
@@ -990,6 +1266,12 @@ document.getElementById('checkUpdateBtn').addEventListener('click', async () => 
     } else {
       statusEl.style.color = 'var(--accent-hover)';
       statusEl.innerHTML = `Update available: <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener">${escapeHtml(result.latestVersion)}</a> (you're on ${escapeHtml(result.currentVersion)}).`;
+      if (result.canApplyInPlace) {
+        applyBtn.hidden = false;
+        applyBtn.dataset.targetVersion = result.latestVersion;
+      } else {
+        statusEl.innerHTML += ' <span class="hint">(no in-place update package published for this release — re-flash to install it.)</span>';
+      }
     }
   } catch (err) {
     statusEl.style.color = 'var(--danger)';
@@ -997,6 +1279,83 @@ document.getElementById('checkUpdateBtn').addEventListener('click', async () => 
   } finally {
     btn.disabled = false;
   }
+});
+
+// ---------- Apply update / rollback ----------
+async function loadUpdateStatus() {
+  const status = await api.get('/api/update/status');
+  document.getElementById('rollbackUpdateBtn').hidden = !status.hasBackup;
+}
+
+/** Polls a no-auth endpoint until it responds, since the service restart this waits out
+ * also invalidates the in-memory session -- a 401 from an authenticated endpoint would
+ * look identical to "still down." */
+async function pollUntilBackUp(onTick, timeoutMs = 3 * 60 * 1000) {
+  const start = Date.now();
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch('/api/session', { cache: 'no-store' });
+      if (res.ok) return true;
+    } catch {
+      // expected while the service is mid-restart
+    }
+    onTick();
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  return false;
+}
+
+async function runUpdateAction(apiPath, confirmMessage, startingMessage) {
+  if (!confirm(confirmMessage)) return;
+  const progressEl = document.getElementById('updateProgress');
+  const applyBtn = document.getElementById('applyUpdateBtn');
+  const rollbackBtn = document.getElementById('rollbackUpdateBtn');
+  applyBtn.disabled = true;
+  rollbackBtn.disabled = true;
+  progressEl.style.color = 'var(--text-dim)';
+  progressEl.textContent = startingMessage;
+  try {
+    await api.post(apiPath);
+  } catch (err) {
+    progressEl.style.color = 'var(--danger)';
+    progressEl.textContent = err.message;
+    applyBtn.disabled = false;
+    rollbackBtn.disabled = false;
+    return;
+  }
+  progressEl.textContent = 'In progress -- watch the Log tab for details. This page will lose its connection when the service restarts, then reconnect on its own.';
+  const backUp = await pollUntilBackUp(() => {
+    progressEl.textContent = 'Waiting for the service to come back...';
+  });
+  if (backUp) {
+    progressEl.style.color = 'var(--ok)';
+    progressEl.textContent = 'Service is back. Reloading…';
+    setTimeout(() => window.location.reload(), 1000);
+  } else {
+    progressEl.style.color = 'var(--danger)';
+    progressEl.textContent =
+      'The service did not come back within 3 minutes. SSH in on port 22 and run "systemctl status terminalserver", or "sudo bash /opt/terminalserver/provisioning/rollback-update.sh" to restore the previous version.';
+    applyBtn.disabled = false;
+    rollbackBtn.disabled = false;
+  }
+}
+
+document.getElementById('applyUpdateBtn').addEventListener('click', () => {
+  const target = document.getElementById('applyUpdateBtn').dataset.targetVersion || 'the latest version';
+  runUpdateAction(
+    '/api/update/apply',
+    `This downloads and applies ${target}, then restarts the service. All active SSH and web console sessions will briefly disconnect. Continue?`,
+    'Starting update…'
+  );
+});
+
+document.getElementById('rollbackUpdateBtn').addEventListener('click', () => {
+  runUpdateAction(
+    '/api/update/rollback',
+    'Roll back to the previous version? This restarts the service and briefly disconnects active sessions.',
+    'Starting rollback…'
+  );
 });
 
 // ---------- Init ----------
@@ -1011,7 +1370,9 @@ async function initApp() {
   await loadUsersTable();
   await loadMyUsername();
   await loadAdminsTable();
+  await loadTotpStatus();
   await loadVersion();
+  await loadUpdateStatus();
   renderSessions(await api.get('/api/sessions'));
   renderStats(await api.get('/api/stats'));
   await loadLogHistory();
