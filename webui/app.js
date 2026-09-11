@@ -401,9 +401,106 @@ async function loadNetwork() {
   document.getElementById('dnsServers').value = data.dns.join(', ');
   await loadTimezoneList();
   setTimezoneUi(data.timezone);
+  populateStaticIpDevices(data.interfaces);
+  await loadStaticIpConfig();
 }
 
 document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());
+
+// ---------- Static IP ----------
+function prefixToMask(prefix) {
+  const bits = '1'.repeat(prefix).padEnd(32, '0');
+  return [0, 8, 16, 24].map((i) => parseInt(bits.slice(i, i + 8), 2)).join('.');
+}
+
+function populateStaticIpDevices(interfaces) {
+  const select = document.getElementById('staticIpDevice');
+  const previous = select.value;
+  select.innerHTML = interfaces
+    .map((i) => `<option value="${escapeHtml(i.name)}">${escapeHtml(i.name)} (${escapeHtml(i.type)})</option>`)
+    .join('');
+  if (previous && [...select.options].some((o) => o.value === previous)) {
+    select.value = previous;
+  }
+}
+
+async function loadStaticIpConfig() {
+  const device = document.getElementById('staticIpDevice').value;
+  const msg = document.getElementById('staticIpMsg');
+  const pill = document.getElementById('staticIpModePill');
+  const text = document.getElementById('staticIpModeText');
+  msg.textContent = '';
+  if (!device) {
+    pill.classList.remove('running');
+    text.textContent = '—';
+    return;
+  }
+  try {
+    const config = await api.get(`/api/network/interfaces/${encodeURIComponent(device)}/ip-config`);
+    const isManual = config.method === 'manual';
+    pill.classList.toggle('running', isManual);
+    text.textContent = isManual ? 'Static' : 'DHCP';
+    document.getElementById('staticIpAddress').value = config.address || '';
+    document.getElementById('staticIpMask').value = config.prefix != null ? prefixToMask(config.prefix) : '';
+    document.getElementById('staticIpGateway').value = config.gateway || '';
+  } catch (err) {
+    pill.classList.remove('running');
+    text.textContent = '—';
+    document.getElementById('staticIpAddress').value = '';
+    document.getElementById('staticIpMask').value = '';
+    document.getElementById('staticIpGateway').value = '';
+    msg.textContent = err.message;
+  }
+}
+
+document.getElementById('staticIpDevice').addEventListener('change', () => loadStaticIpConfig());
+
+document.getElementById('saveStaticIpBtn').addEventListener('click', async () => {
+  const device = document.getElementById('staticIpDevice').value;
+  const msg = document.getElementById('staticIpMsg');
+  msg.textContent = '';
+  if (!device) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Choose an interface first.';
+    return;
+  }
+  const address = document.getElementById('staticIpAddress').value.trim();
+  const mask = document.getElementById('staticIpMask').value.trim();
+  const gateway = document.getElementById('staticIpGateway').value.trim();
+  if (
+    !confirm(
+      `Set a static IP on ${device}? If anything here is wrong, this interface -- possibly including this admin UI, if you're reaching it through here -- could become unreachable until someone fixes it via SSH or the physical console.`
+    )
+  ) {
+    return;
+  }
+  try {
+    await api.post(`/api/network/interfaces/${encodeURIComponent(device)}/ip`, { address, mask, gateway });
+    await loadStaticIpConfig();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Saved.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('clearStaticIpBtn').addEventListener('click', async () => {
+  const device = document.getElementById('staticIpDevice').value;
+  const msg = document.getElementById('staticIpMsg');
+  msg.textContent = '';
+  if (!device) return;
+  if (!confirm(`Revert ${device} to DHCP?`)) return;
+  try {
+    await api.post(`/api/network/interfaces/${encodeURIComponent(device)}/ip/clear`);
+    await loadStaticIpConfig();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Reverted to DHCP.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
 
 document.getElementById('toggleWifiBtn').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
@@ -570,6 +667,29 @@ document.getElementById('changeAdminPasswordBtn').addEventListener('click', asyn
     await api.post('/api/admin-password', { password });
     document.getElementById('newAdminPassword').value = '';
     document.getElementById('newAdminPasswordConfirm').value = '';
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Password updated.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+// ---------- Pi system (Linux) account password ----------
+document.getElementById('changeOsPasswordBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('osPasswordMsg');
+  msg.textContent = '';
+  const password = document.getElementById('osPassword').value;
+  const confirmPassword = document.getElementById('osPasswordConfirm').value;
+  if (password !== confirmPassword) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Passwords do not match.';
+    return;
+  }
+  try {
+    await api.post('/api/os-password', { password });
+    document.getElementById('osPassword').value = '';
+    document.getElementById('osPasswordConfirm').value = '';
     msg.style.color = 'var(--ok)';
     msg.textContent = 'Password updated.';
   } catch (err) {

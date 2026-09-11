@@ -538,6 +538,14 @@
         </ul>
       </div>
       <div class="card">
+        <h4>Static IP</h4>
+        <p>Pick an interface from the dropdown to see and change its addressing. The pill shows whether it's currently <strong>DHCP</strong> or <strong>Static</strong>. Fill in an <strong>IP Address</strong>, <strong>Subnet Mask</strong> (dotted-decimal, e.g. <code>255.255.255.0</code>, not a <code>/24</code>-style prefix), and <strong>Gateway</strong>, then <strong>Save</strong>. <strong>Use DHCP</strong> reverts that interface back to automatic addressing.</p>
+      </div>
+      <div class="callout warn">
+        <span class="mark">This can lock you out</span>
+        <p>A wrong address, mask, or gateway can take the interface off the network entirely &mdash; including cutting off this admin UI, if you're reaching it through that same interface. Double-check every field before saving. If it does go wrong, recovery needs SSH on port 22 (through a different interface, if the Pi has one) or the physical console &mdash; <code>nmcli connection show</code> and <code>nmcli connection modify &lt;name&gt; ipv4.method auto</code> put it back on DHCP from there.</p>
+      </div>
+      <div class="card">
         <h4>Wi-Fi</h4>
         <p><strong>Enable/Disable Wi-Fi</strong> toggles the radio itself. <strong>Scan for Networks</strong> lists nearby SSIDs with signal strength and security type &mdash; click <strong>Use</strong> on one to fill in its SSID, then enter the password and <strong>Connect</strong>. You can also just type an SSID directly if it's hidden or out of range of the scan.</p>
       </div>
@@ -551,7 +559,7 @@
       </div>
       <div class="callout tip">
         <span class="mark">Under the hood</span>
-        <p>The app itself runs as an unprivileged system account. Wi-Fi, DNS, NTP, and timezone changes all go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
+        <p>The app itself runs as an unprivileged system account. Wi-Fi, static IP, DNS, NTP, and timezone changes all go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant. Static IP settings aren't included in <a href="#tab-server">Backup &amp; Restore</a> on purpose &mdash; blindly reapplying a saved address to a Pi that's since moved to a different network is more likely to strand it than help it.</p>
       </div>
     </section>
 
@@ -649,6 +657,10 @@
       <div class="card">
         <h4>My Account</h4>
         <p>Change your own password here at any time &mdash; independent of the forced first-login change covered earlier.</p>
+      </div>
+      <div class="card">
+        <h4>Pi System Account</h4>
+        <p>Changes the password for the underlying Linux <code>admin</code> account (SSH on port 22, normal shell access to the Pi itself) &mdash; a completely different account from this web login and from the console users on the <a href="#tab-users">Users tab</a>. Unlike this web login's password, it isn't force-rotated for you, so it's worth changing from the default at some point.</p>
       </div>
       <div class="card">
         <h4>Two-Factor Authentication</h4>
@@ -794,7 +806,7 @@ tftp terminalserver.local
       <h2>Security notes</h2>
       <div class="card">
         <h4>Change the Linux account password too</h4>
-        <p>The web UI forces a password change on first login; the underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) does not. Run <code>passwd</code> after logging in over SSH on port 22 if you haven't already.</p>
+        <p>The web UI forces a password change on first login; the underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) does not. Change it from <strong>Admin Account &rarr; Pi System Account</strong> in the web UI, or run <code>passwd</code> after logging in over SSH on port 22 &mdash; either works, they're changing the same account.</p>
       </div>
       <div class="card">
         <h4>The web UI's certificate is self-signed</h4>
