@@ -240,8 +240,7 @@
         </div>
         <div class="field-row">
           <label for="timezoneInput">Timezone</label>
-          <input type="text" id="timezoneInput" list="timezoneList" autocomplete="off" />
-          <datalist id="timezoneList"></datalist>
+          <select id="timezoneInput"></select>
           <button id="saveTimezoneBtn">Save</button>
         </div>
         <div class="field-row">
@@ -250,7 +249,7 @@
           <button id="saveDnsBtn">Save</button>
           <button id="clearDnsBtn" class="secondary">Use DHCP</button>
         </div>
-        <p class="hint">DNS Servers shows what's currently in effect. Leave it as-is (or click Use DHCP) to keep using whatever your network hands out automatically.</p>
+        <p class="hint">IPv4 addresses only. DNS Servers shows what's currently in effect. Leave it as-is (or click Use DHCP) to keep using whatever your network hands out automatically.</p>
         <div class="auth-error" id="timeDnsMsg"></div>
       </div>
     </div>

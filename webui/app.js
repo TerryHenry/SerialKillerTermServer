@@ -327,13 +327,29 @@ function setWifiRadioUi(state) {
   btn.disabled = state == null;
 }
 
+// Only marked done once we've actually populated it with a non-empty list, so a failed
+// or empty fetch (e.g. timedatectl unavailable) retries on the next loadNetwork() call
+// instead of leaving the picker permanently empty for the rest of the session.
 let timezonesLoaded = false;
 
 async function loadTimezoneList() {
   if (timezonesLoaded) return;
-  timezonesLoaded = true;
   const zones = await api.get('/api/network/timezones');
-  document.getElementById('timezoneList').innerHTML = zones.map((z) => `<option value="${escapeHtml(z)}"></option>`).join('');
+  document.getElementById('timezoneInput').innerHTML = zones
+    .map((z) => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`)
+    .join('');
+  timezonesLoaded = zones.length > 0;
+}
+
+// A plain <select> (not <input list> + <datalist>) so the full list is always visible --
+// a datalist filters its suggestions against whatever the input already contains, which
+// with the current timezone pre-filled meant only that one zone ever showed up.
+function setTimezoneUi(timezone) {
+  const select = document.getElementById('timezoneInput');
+  if (timezone && ![...select.options].some((o) => o.value === timezone)) {
+    select.insertAdjacentHTML('afterbegin', `<option value="${escapeHtml(timezone)}">${escapeHtml(timezone)}</option>`);
+  }
+  select.value = timezone || '';
 }
 
 function setNtpSyncUi(synchronized) {
@@ -350,9 +366,9 @@ async function loadNetwork() {
   setWifiRadioUi(data.wifiRadio);
   document.getElementById('ntpServer').value = data.ntp.server;
   setNtpSyncUi(data.ntp.synchronized);
-  document.getElementById('timezoneInput').value = data.timezone || '';
   document.getElementById('dnsServers').value = data.dns.join(', ');
-  loadTimezoneList();
+  await loadTimezoneList();
+  setTimezoneUi(data.timezone);
 }
 
 document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());

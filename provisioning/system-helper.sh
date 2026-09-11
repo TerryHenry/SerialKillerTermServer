@@ -42,12 +42,18 @@ case "${1:-}" in
     shift
     servers="$*"
     [ -n "$servers" ] || { echo "at least one DNS server required" >&2; exit 1; }
+    # IPv4 only -- the app validates this before ever calling here, but re-checked since
+    # this script is the actual privilege boundary. IPv6 DNS is left alone either way.
+    for s in $servers; do
+      case "$s" in
+        *[!0-9.]*|'') echo "not an IPv4 address: $s" >&2; exit 1 ;;
+      esac
+    done
     # Applied to every currently-active connection (not just one) so the override holds
     # regardless of which interface (Ethernet or Wi-Fi) ends up carrying traffic.
     nmcli -t -f NAME connection show --active | while IFS= read -r conn; do
       [ -n "$conn" ] || continue
       nmcli connection modify "$conn" ipv4.ignore-auto-dns yes ipv4.dns "$servers"
-      nmcli connection modify "$conn" ipv6.ignore-auto-dns yes ipv6.dns "$servers"
       nmcli connection up "$conn" >/dev/null
     done
     ;;
@@ -55,7 +61,6 @@ case "${1:-}" in
     nmcli -t -f NAME connection show --active | while IFS= read -r conn; do
       [ -n "$conn" ] || continue
       nmcli connection modify "$conn" ipv4.ignore-auto-dns no ipv4.dns ""
-      nmcli connection modify "$conn" ipv6.ignore-auto-dns no ipv6.dns ""
       nmcli connection up "$conn" >/dev/null
     done
     ;;
