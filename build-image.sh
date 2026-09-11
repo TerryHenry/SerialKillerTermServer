@@ -33,7 +33,12 @@ cp "$SOURCE_IMG" "$OUTPUT_IMG"
 echo "==> Building application tarball..."
 APP_TAR="$BUILD_DIR/terminalserver-app.tar.gz"
 rm -f "$APP_TAR" "$APP_TAR.sha256"
-tar -czf "$APP_TAR" \
+# COPYFILE_DISABLE stops macOS's tar from writing extended attributes (this source tree
+# tends to pick up com.apple.macl/com.apple.provenance) as PAX headers -- GNU tar on the
+# Linux target doesn't recognize that keyword and materializes each one as a separate
+# "._<name>" sidecar file instead of just ignoring it, which then shows up as (and fails
+# to parse as) a bogus extra ".js" file.
+COPYFILE_DISABLE=1 tar -czf "$APP_TAR" \
   --exclude='node_modules' \
   --exclude='build' \
   --exclude='build-image.sh' \
