@@ -32,14 +32,19 @@ cp "$SOURCE_IMG" "$OUTPUT_IMG"
 
 echo "==> Building application tarball..."
 APP_TAR="$BUILD_DIR/terminalserver-app.tar.gz"
-rm -f "$APP_TAR"
+rm -f "$APP_TAR" "$APP_TAR.sha256"
 tar -czf "$APP_TAR" \
   --exclude='node_modules' \
   --exclude='build' \
   --exclude='build-image.sh' \
   --exclude='.DS_Store' \
   -C "$SCRIPT_DIR" \
-  server.js package.json lib webui provisioning
+  server.js package.json package-lock.json lib webui provisioning
+
+# Published alongside the tarball as its own release asset -- the in-place updater
+# (lib/selfUpdate.js) refuses to apply a downloaded update whose checksum doesn't match
+# this exactly, so a corrupted or tampered download can't be installed.
+shasum -a 256 "$APP_TAR" | awk '{print $1}' > "$APP_TAR.sha256"
 
 DEVICE=""
 MOUNT_POINT=""

@@ -47,6 +47,12 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   from a CSV file (Users tab), instead of one-by-one through the form.
   Only ever creates new accounts; a username that already exists is
   skipped, never overwritten.
+- **In-place updates** — the About tab's Apply Update button patches a
+  running Pi to a newer release (small app-only download, not a
+  multi-gigabyte image) instead of requiring a full SD card re-flash.
+  Checksum-verified, syntax-checked, and backed up before anything live is
+  touched; one click rolls back if you change your mind. See
+  [Applying updates](#applying-updates) below.
 - **Dashboard tab** — live CPU, memory, and disk usage, total connected
   clients, and a live status (present/missing) and client count for every
   configured serial port.
@@ -137,6 +143,45 @@ its own first-boot provisioning.
    UI), and it won't accept the default password as the replacement. Once
    changed, configure serial ports and users as normal.
 
+## Applying updates
+
+Once a Pi is flashed and running, later releases (that publish an in-place
+update package — see "Publishing a release" below) can be applied directly
+from the admin UI instead of re-flashing:
+
+1. About tab → **Check for Updates**.
+2. If a newer version is available and publishes an update package, an
+   **Apply Update** button appears. Confirming it downloads (~a few hundred
+   KB, not the full image), checksum-verifies, syntax-checks, and installs
+   dependencies for the new version in a staging area — all before the
+   running service is touched — then backs up the current version, swaps
+   in the new one, and restarts.
+3. The page reconnects and reloads on its own once the service is back
+   (a few seconds; active SSH/web-console sessions disconnect, same as any
+   restart). **Roll Back to Previous Version** undoes the most recent
+   update the same way, in reverse.
+
+If the new version won't even start, `terminalserver.service` gives up
+after 3 failed restarts within 60 seconds (rather than crash-looping), and
+`sudo bash /opt/terminalserver/provisioning/rollback-update.sh` over SSH
+restores the backup independently of whether the app is running at all.
+
+### Publishing a release
+
+For a release to be self-update-capable, its GitHub Release needs two
+extra assets alongside the image — `build-image.sh` generates both in
+`build/`:
+
+- `terminalserver-app.tar.gz` — the app-only tarball (`server.js`,
+  `package.json`/`package-lock.json`, `lib/`, `webui/`, `provisioning/`,
+  no `node_modules`) that gets applied in place.
+- `terminalserver-app.tar.gz.sha256` — its checksum. The updater refuses to
+  apply a download that doesn't match this exactly.
+
+Releases published without these two files still show up in **Check for
+Updates** (so admins know a newer version exists), just without an
+**Apply Update** button — re-flashing is the only option for those.
+
 ## Notes / limitations
 
 - The admin web UI's TLS certificate is self-signed and generated locally on
@@ -157,6 +202,12 @@ its own first-boot provisioning.
   transition outright (`sudo: unable to change to root gid: Operation not
   permitted`). The actual privilege boundary is the sudoers rule, not the
   capability set.
+- The in-place updater keeps this same narrow-privilege model: everything
+  through staging, syntax-checking, `npm install`, and backup runs
+  unprivileged as the `terminalserver` account (which already owns
+  `/opt/terminalserver`) — the sudoers helper is only ever called for the
+  final `systemctl restart terminalserver.service`, and only after
+  everything else has already succeeded.
 - A DNS override is applied to every currently-active NetworkManager
   connection (not just one), so it holds regardless of which interface,
   Ethernet or Wi-Fi, ends up carrying traffic. The Network tab's DNS field

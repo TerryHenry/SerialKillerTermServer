@@ -64,8 +64,15 @@ case "${1:-}" in
       nmcli connection up "$conn" >/dev/null
     done
     ;;
+  service-restart)
+    # Takes no arguments -- the app can only ever restart itself, never target an
+    # arbitrary unit. All the actual update logic (download, checksum, staging,
+    # validation, backup) runs unprivileged as the app's own account, which already
+    # owns /opt/terminalserver; this is the one step that genuinely needs root.
+    exec systemctl restart terminalserver.service
+    ;;
   *)
-    echo "usage: system-helper.sh {enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear}" >&2
+    echo "usage: system-helper.sh {enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart}" >&2
     exit 1
     ;;
 esac

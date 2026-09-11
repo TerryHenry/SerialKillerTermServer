@@ -1250,7 +1250,9 @@ async function loadVersion() {
 document.getElementById('checkUpdateBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('updateStatus');
   const btn = document.getElementById('checkUpdateBtn');
+  const applyBtn = document.getElementById('applyUpdateBtn');
   btn.disabled = true;
+  applyBtn.hidden = true;
   statusEl.style.color = 'var(--text-dim)';
   statusEl.textContent = 'Checking…';
   try {
@@ -1264,6 +1266,12 @@ document.getElementById('checkUpdateBtn').addEventListener('click', async () => 
     } else {
       statusEl.style.color = 'var(--accent-hover)';
       statusEl.innerHTML = `Update available: <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener">${escapeHtml(result.latestVersion)}</a> (you're on ${escapeHtml(result.currentVersion)}).`;
+      if (result.canApplyInPlace) {
+        applyBtn.hidden = false;
+        applyBtn.dataset.targetVersion = result.latestVersion;
+      } else {
+        statusEl.innerHTML += ' <span class="hint">(no in-place update package published for this release — re-flash to install it.)</span>';
+      }
     }
   } catch (err) {
     statusEl.style.color = 'var(--danger)';
@@ -1271,6 +1279,83 @@ document.getElementById('checkUpdateBtn').addEventListener('click', async () => 
   } finally {
     btn.disabled = false;
   }
+});
+
+// ---------- Apply update / rollback ----------
+async function loadUpdateStatus() {
+  const status = await api.get('/api/update/status');
+  document.getElementById('rollbackUpdateBtn').hidden = !status.hasBackup;
+}
+
+/** Polls a no-auth endpoint until it responds, since the service restart this waits out
+ * also invalidates the in-memory session -- a 401 from an authenticated endpoint would
+ * look identical to "still down." */
+async function pollUntilBackUp(onTick, timeoutMs = 3 * 60 * 1000) {
+  const start = Date.now();
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch('/api/session', { cache: 'no-store' });
+      if (res.ok) return true;
+    } catch {
+      // expected while the service is mid-restart
+    }
+    onTick();
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  return false;
+}
+
+async function runUpdateAction(apiPath, confirmMessage, startingMessage) {
+  if (!confirm(confirmMessage)) return;
+  const progressEl = document.getElementById('updateProgress');
+  const applyBtn = document.getElementById('applyUpdateBtn');
+  const rollbackBtn = document.getElementById('rollbackUpdateBtn');
+  applyBtn.disabled = true;
+  rollbackBtn.disabled = true;
+  progressEl.style.color = 'var(--text-dim)';
+  progressEl.textContent = startingMessage;
+  try {
+    await api.post(apiPath);
+  } catch (err) {
+    progressEl.style.color = 'var(--danger)';
+    progressEl.textContent = err.message;
+    applyBtn.disabled = false;
+    rollbackBtn.disabled = false;
+    return;
+  }
+  progressEl.textContent = 'In progress -- watch the Log tab for details. This page will lose its connection when the service restarts, then reconnect on its own.';
+  const backUp = await pollUntilBackUp(() => {
+    progressEl.textContent = 'Waiting for the service to come back...';
+  });
+  if (backUp) {
+    progressEl.style.color = 'var(--ok)';
+    progressEl.textContent = 'Service is back. Reloading…';
+    setTimeout(() => window.location.reload(), 1000);
+  } else {
+    progressEl.style.color = 'var(--danger)';
+    progressEl.textContent =
+      'The service did not come back within 3 minutes. SSH in on port 22 and run "systemctl status terminalserver", or "sudo bash /opt/terminalserver/provisioning/rollback-update.sh" to restore the previous version.';
+    applyBtn.disabled = false;
+    rollbackBtn.disabled = false;
+  }
+}
+
+document.getElementById('applyUpdateBtn').addEventListener('click', () => {
+  const target = document.getElementById('applyUpdateBtn').dataset.targetVersion || 'the latest version';
+  runUpdateAction(
+    '/api/update/apply',
+    `This downloads and applies ${target}, then restarts the service. All active SSH and web console sessions will briefly disconnect. Continue?`,
+    'Starting update…'
+  );
+});
+
+document.getElementById('rollbackUpdateBtn').addEventListener('click', () => {
+  runUpdateAction(
+    '/api/update/rollback',
+    'Roll back to the previous version? This restarts the service and briefly disconnects active sessions.',
+    'Starting rollback…'
+  );
 });
 
 // ---------- Init ----------
@@ -1287,6 +1372,7 @@ async function initApp() {
   await loadAdminsTable();
   await loadTotpStatus();
   await loadVersion();
+  await loadUpdateStatus();
   renderSessions(await api.get('/api/sessions'));
   renderStats(await api.get('/api/stats'));
   await loadLogHistory();

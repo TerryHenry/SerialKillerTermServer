@@ -672,7 +672,28 @@
       <div class="card">
         <h4>Version &amp; Check for Updates</h4>
         <p>The version shown here comes straight from the running app (<code>package.json</code>), not a hardcoded label, so it can't drift out of sync with what's actually installed.</p>
-        <p><strong>Check for Updates</strong> asks GitHub for this repo's latest published release and compares it to the running version, reporting one of: up to date, an update is available (with a link to it), or no releases published yet. This only checks and reports &mdash; it doesn't download or install anything, so there's no risk in clicking it.</p>
+        <p><strong>Check for Updates</strong> asks GitHub for this repo's latest published release and compares it to the running version, reporting one of: up to date, an update is available, or no releases published yet. This only checks and reports &mdash; it doesn't download or install anything, so there's no risk in clicking it.</p>
+      </div>
+      <div class="card">
+        <h4>Apply Update</h4>
+        <p>When a newer release publishes an in-place update package, <strong>Check for Updates</strong> also shows an <strong>Apply Update</strong> button &mdash; a small (roughly half a megabyte) app-only download, not the multi-gigabyte full image. It patches the running install instead of re-flashing the SD card. Confirming it:</p>
+        <ol class="steps">
+          <li>Downloads the new version and verifies its checksum against the one published alongside it &mdash; a corrupted or tampered download is refused outright, before anything on the Pi is touched.</li>
+          <li>Extracts it to a staging area and syntax-checks every file, then installs its dependencies there &mdash; still without touching the live app.</li>
+          <li>Only once all of that passes: backs up the current version, swaps the new one in, and restarts the service.</li>
+        </ol>
+        <p>The restart takes a few seconds and disconnects active SSH and web console sessions, same as a manual restart would. Watch the <a href="#tab-sessions">Log tab</a> for live progress up until the restart; the page then waits for the service to come back and reloads itself automatically.</p>
+        <p>Config, serial port settings, users, and admin accounts are all untouched by an update &mdash; only the application code changes.</p>
+      </div>
+      <div class="card">
+        <h4>Roll Back to Previous Version</h4>
+        <p>Appears once a backup exists from a prior update. Restores it and restarts the service, the same way <strong>Apply Update</strong> does in reverse &mdash; use it if the new version applied fine but you don't want it. Only the single most recent pre-update backup is kept (each new update replaces it), so this undoes the <em>last</em> update, not an arbitrary earlier one.</p>
+      </div>
+      <div class="callout warn">
+        <span class="mark">If the service won't come back at all</span>
+        <p>The button-based rollback above needs the app itself to be healthy enough to respond &mdash; no good if the new version won't even start. For that case, SSH in on port 22 and run:</p>
+        <pre class="term">sudo bash /opt/terminalserver/provisioning/rollback-update.sh</pre>
+        <p>It restores the same backup independently of whether the app is running at all. <code>terminalserver.service</code> also gives up after 3 failed starts within 60 seconds rather than crash-looping forever, so a badly broken update fails cleanly instead of hammering the Pi.</p>
       </div>
     </section>
 
@@ -816,6 +837,14 @@ tftp terminalserver.local
             <tr>
               <td>Can't log into <code>/terminal</code> with an admin account</td>
               <td>Expected &mdash; the web console only accepts the console users from the <a href="#tab-users">Users tab</a>, the same ones SSH uses. It's a separate login from the admin UI on purpose.</td>
+            </tr>
+            <tr>
+              <td>No <strong>Apply Update</strong> button even though a newer version exists</td>
+              <td>That release doesn't publish an in-place update package (common for releases from before this feature existed). Re-flash the SD card with the new image instead.</td>
+            </tr>
+            <tr>
+              <td>Page never comes back after clicking <strong>Apply Update</strong></td>
+              <td>It waits up to 3 minutes, which covers a normal download + dependency install + restart. Past that, SSH in on port 22 and check <code>systemctl status terminalserver</code> &mdash; see <a href="#tab-about">Apply Update</a> above for the manual rollback command if it won't start.</td>
             </tr>
             <tr>
               <td>Wi-Fi radio won't turn on, or Connect fails</td>
