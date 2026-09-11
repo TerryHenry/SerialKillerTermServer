@@ -47,6 +47,9 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   connection name (via NetworkManager), plus this Pi's public IP if it has
   internet access. Also enables/disables the Wi-Fi radio and joins a Wi-Fi
   network (scan or type an SSID + password) directly from the admin UI.
+  Also sets the **NTP server** (defaults to `pool.ntp.org`, with a live
+  synced/not-synced status), the **timezone**, and a **DNS override** (or
+  hand DNS back to whatever DHCP provides).
 - **Web-based serial console** (`https://<pi>:8443/terminal`) — the same
   users configured in the Users tab can also get a serial console straight
   in the browser (xterm.js, no extra software), alongside SSH access. Users
@@ -58,6 +61,10 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   Stop/Start button there persists (unlike a plain "stop," a disabled
   server stays disabled across a reboot instead of coming back via
   auto-start).
+- **Sessions tab** — every active session across *both* access channels, SSH
+  and the web console, in one list, tagged with a Method column so you can
+  tell them apart. Disconnect works the same way regardless of which
+  channel a session came in on.
 - **Audit log** — admin actions (settings changes, port/user/admin
   create/delete, backup restores, TFTP file changes) are recorded, tagged
   with who did it, right alongside the rest of the server's activity log.
@@ -128,14 +135,20 @@ its own first-boot provisioning.
   own certificate.
 - Re-running `build-image.sh` is safe — it strips any previously injected
   `cmdline.txt` trigger before adding its own.
-- Wi-Fi control relies on Raspberry Pi OS Bookworm's default NetworkManager
-  (`nmcli`) stack. The unprivileged `terminalserver` service account is
-  granted a narrowly-scoped, validated `sudoers.d` rule during setup that
-  lets it run exactly one fixed helper script
-  (`provisioning/wifi-helper.sh`) as root — never a raw shell or arbitrary
-  `nmcli` invocation. `terminalserver.service` intentionally carries no
-  `CapabilityBoundingSet` restriction, because that setting applies to the
-  whole process tree including the `sudo` child the app shells out to —
-  a narrow bounding set breaks sudo's own root transition outright (`sudo:
-  unable to change to root gid: Operation not permitted`). The actual
-  privilege boundary is the sudoers rule, not the capability set.
+- Wi-Fi, DNS, NTP, and timezone control rely on Raspberry Pi OS Bookworm's
+  default NetworkManager (`nmcli`) and `systemd-timesyncd`/`timedatectl`
+  stacks. The unprivileged `terminalserver` service account is granted a
+  narrowly-scoped, validated `sudoers.d` rule during setup that lets it run
+  exactly one fixed helper script (`provisioning/system-helper.sh`) as root
+  — never a raw shell or arbitrary command. `terminalserver.service`
+  intentionally carries no `CapabilityBoundingSet` restriction, because that
+  setting applies to the whole process tree including the `sudo` child the
+  app shells out to — a narrow bounding set breaks sudo's own root
+  transition outright (`sudo: unable to change to root gid: Operation not
+  permitted`). The actual privilege boundary is the sudoers rule, not the
+  capability set.
+- A DNS override is applied to every currently-active NetworkManager
+  connection (not just one), so it holds regardless of which interface,
+  Ethernet or Wi-Fi, ends up carrying traffic. The Network tab's DNS field
+  always reflects what's actually in effect (read from `/etc/resolv.conf`),
+  whether that came from DHCP or an override set here.

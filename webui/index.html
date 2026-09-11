@@ -226,6 +226,33 @@
         </div>
         <div class="auth-error" id="wifiMsg"></div>
       </div>
+
+      <div class="panel">
+        <h2>Time &amp; DNS</h2>
+        <div class="field-row">
+          <label for="ntpServer">NTP Server</label>
+          <input type="text" id="ntpServer" placeholder="pool.ntp.org" autocomplete="off" />
+          <span class="status-pill" id="ntpSyncPill">
+            <span class="dot"></span>
+            <span id="ntpSyncText">Unknown</span>
+          </span>
+          <button id="saveNtpBtn">Save</button>
+        </div>
+        <div class="field-row">
+          <label for="timezoneInput">Timezone</label>
+          <input type="text" id="timezoneInput" list="timezoneList" autocomplete="off" />
+          <datalist id="timezoneList"></datalist>
+          <button id="saveTimezoneBtn">Save</button>
+        </div>
+        <div class="field-row">
+          <label for="dnsServers">DNS Servers</label>
+          <input type="text" id="dnsServers" placeholder="e.g. 1.1.1.1, 8.8.8.8" autocomplete="off" />
+          <button id="saveDnsBtn">Save</button>
+          <button id="clearDnsBtn" class="secondary">Use DHCP</button>
+        </div>
+        <p class="hint">DNS Servers shows what's currently in effect. Leave it as-is (or click Use DHCP) to keep using whatever your network hands out automatically.</p>
+        <div class="auth-error" id="timeDnsMsg"></div>
+      </div>
     </div>
 
     <div class="tab-content" id="tab-ports">
@@ -301,7 +328,7 @@
       <div class="panel">
         <h2>Active Sessions</h2>
         <table class="data-table" id="sessionsTable">
-          <thead><tr><th>User</th><th>Connected To</th><th>Since</th><th>Access</th><th></th></tr></thead>
+          <thead><tr><th>User</th><th>Method</th><th>Connected To</th><th>Since</th><th>Access</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

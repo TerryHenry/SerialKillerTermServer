@@ -327,11 +327,32 @@ function setWifiRadioUi(state) {
   btn.disabled = state == null;
 }
 
+let timezonesLoaded = false;
+
+async function loadTimezoneList() {
+  if (timezonesLoaded) return;
+  timezonesLoaded = true;
+  const zones = await api.get('/api/network/timezones');
+  document.getElementById('timezoneList').innerHTML = zones.map((z) => `<option value="${escapeHtml(z)}"></option>`).join('');
+}
+
+function setNtpSyncUi(synchronized) {
+  const pill = document.getElementById('ntpSyncPill');
+  const text = document.getElementById('ntpSyncText');
+  pill.classList.toggle('running', synchronized === true);
+  text.textContent = synchronized === true ? 'Synced' : synchronized === false ? 'Not synced' : 'Unknown';
+}
+
 async function loadNetwork() {
   const data = await api.get('/api/network');
   renderNetworkInterfaces(data.interfaces);
   document.getElementById('publicIpValue').textContent = data.publicIp || 'unavailable';
   setWifiRadioUi(data.wifiRadio);
+  document.getElementById('ntpServer').value = data.ntp.server;
+  setNtpSyncUi(data.ntp.synchronized);
+  document.getElementById('timezoneInput').value = data.timezone || '';
+  document.getElementById('dnsServers').value = data.dns.join(', ');
+  loadTimezoneList();
 }
 
 document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());
@@ -413,6 +434,76 @@ document.getElementById('wifiConnectBtn').addEventListener('click', async (e) =>
   } finally {
     btn.disabled = false;
     btn.textContent = 'Connect';
+  }
+});
+
+document.getElementById('saveNtpBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  const server = document.getElementById('ntpServer').value.trim();
+  if (!server) {
+    msgEl.textContent = 'NTP server is required';
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/ntp', { server });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('saveTimezoneBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  const timezone = document.getElementById('timezoneInput').value.trim();
+  if (!timezone) {
+    msgEl.textContent = 'Timezone is required';
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/timezone', { timezone });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('saveDnsBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/dns', { servers: document.getElementById('dnsServers').value });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('clearDnsBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const msgEl = document.getElementById('timeDnsMsg');
+  msgEl.textContent = '';
+  btn.disabled = true;
+  try {
+    await api.post('/api/network/dns', { servers: '' });
+    await loadNetwork();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
   }
 });
 
@@ -867,6 +958,11 @@ document.getElementById('saveUserBtn').addEventListener('click', async () => {
 });
 
 // ---------- Sessions ----------
+function methodPill(method) {
+  const isHttps = method === 'https';
+  return `<span class="pill ${isHttps ? 'accent' : 'mute'}"><span class="dot"></span>${isHttps ? 'HTTPS' : 'SSH'}</span>`;
+}
+
 function renderSessions(sessions) {
   const tbody = document.querySelector('#sessionsTable tbody');
   tbody.innerHTML = '';
@@ -875,6 +971,7 @@ function renderSessions(sessions) {
     const since = new Date(s.connectedAt).toLocaleTimeString();
     tr.innerHTML = `
       <td>${escapeHtml(s.username)}</td>
+      <td>${methodPill(s.method)}</td>
       <td>${s.portLabel ? escapeHtml(s.portLabel) : '<span class="hint">at menu</span>'}</td>
       <td>${since}</td>
       <td>${permissionPill(s.permission)}</td>

@@ -541,9 +541,17 @@
         <h4>Wi-Fi</h4>
         <p><strong>Enable/Disable Wi-Fi</strong> toggles the radio itself. <strong>Scan for Networks</strong> lists nearby SSIDs with signal strength and security type &mdash; click <strong>Use</strong> on one to fill in its SSID, then enter the password and <strong>Connect</strong>. You can also just type an SSID directly if it's hidden or out of range of the scan.</p>
       </div>
+      <div class="card">
+        <h4>Time &amp; DNS</h4>
+        <ul>
+          <li><strong>NTP Server</strong> &mdash; defaults to <code>pool.ntp.org</code>. The pill next to it shows whether the clock is currently synced.</li>
+          <li><strong>Timezone</strong> &mdash; type to search the full IANA timezone list (e.g. <code>America/New_York</code>).</li>
+          <li><strong>DNS Servers</strong> &mdash; shows what's actually in effect right now, whether that's from DHCP or a previous override. Enter one or more servers (comma or space separated) and <strong>Save</strong> to override, or click <strong>Use DHCP</strong> to go back to whatever the network hands out automatically.</li>
+        </ul>
+      </div>
       <div class="callout tip">
         <span class="mark">Under the hood</span>
-        <p>The app itself runs as an unprivileged system account. Wi-Fi changes go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
+        <p>The app itself runs as an unprivileged system account. Wi-Fi, DNS, NTP, and timezone changes all go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
       </div>
     </section>
 
@@ -603,7 +611,7 @@
       <div class="tab-grid">
         <div class="card">
           <h4>Sessions</h4>
-          <p>Everyone currently connected, which port they're on, and since when. <strong>Disconnect</strong> ends a session immediately &mdash; useful if someone's connection is stuck holding an exclusive port open.</p>
+          <p>Everyone currently connected across <em>both</em> access channels &mdash; SSH and the web console &mdash; in one list: which <strong>Method</strong> they came in on, which port they're on, and since when. <strong>Disconnect</strong> ends a session immediately regardless of channel &mdash; useful if someone's connection is stuck holding an exclusive port open.</p>
         </div>
         <div class="card">
           <h4>Log</h4>
