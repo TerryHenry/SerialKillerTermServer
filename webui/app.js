@@ -49,6 +49,7 @@ function clearFieldError(fieldId) {
 const setupScreen = document.getElementById('setupScreen');
 const loginScreen = document.getElementById('loginScreen');
 const forceChangeScreen = document.getElementById('forceChangeScreen');
+const totpScreen = document.getElementById('totpScreen');
 const appRoot = document.getElementById('appRoot');
 
 // ---------- Auth bootstrap ----------
@@ -56,6 +57,11 @@ async function boot() {
   const session = await api.get('/api/session');
   if (session.needsSetup) {
     show(setupScreen);
+    document.body.classList.remove('app-mode');
+    return;
+  }
+  if (session.needsTotp) {
+    show(totpScreen);
     document.body.classList.remove('app-mode');
     return;
   }
@@ -67,6 +73,18 @@ async function boot() {
   if (session.mustChangePassword) {
     show(forceChangeScreen);
     document.body.classList.remove('app-mode');
+    return;
+  }
+  document.body.classList.add('app-mode');
+  show(appRoot);
+  await initApp();
+}
+
+// Shared by the password-only login and the post-2FA login -- both return the same
+// { mustChangePassword } shape once the session is actually established.
+async function completeLogin(result) {
+  if (result.mustChangePassword) {
+    show(forceChangeScreen);
     return;
   }
   document.body.classList.add('app-mode');
@@ -102,15 +120,29 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       password: document.getElementById('loginPassword').value
     });
     hide(loginScreen);
-    if (result.mustChangePassword) {
-      show(forceChangeScreen);
+    if (result.needsTotp) {
+      document.getElementById('totpCode').value = '';
+      show(totpScreen);
       return;
     }
-    document.body.classList.add('app-mode');
-    show(appRoot);
-    await initApp();
+    await completeLogin(result);
   } catch (err) {
     errorEl.textContent = 'Invalid username or password.';
+  }
+});
+
+document.getElementById('totpForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('totpError');
+  errorEl.textContent = '';
+  try {
+    const result = await api.post('/api/login-totp', { token: document.getElementById('totpCode').value.trim() });
+    hide(totpScreen);
+    await completeLogin(result);
+  } catch (err) {
+    errorEl.textContent = err.message === 'invalid_code' ? 'Wrong code. Try again.' : err.message;
+    document.getElementById('totpCode').value = '';
+    document.getElementById('totpCode').focus();
   }
 });
 
@@ -546,6 +578,86 @@ document.getElementById('changeAdminPasswordBtn').addEventListener('click', asyn
   }
 });
 
+// ---------- Two-factor auth (My Account) ----------
+function setTotpStatusUi(enabled) {
+  const pill = document.getElementById('totpStatusPill');
+  const text = document.getElementById('totpStatusText');
+  pill.classList.toggle('running', enabled);
+  text.textContent = enabled ? 'Enabled' : 'Disabled';
+  document.getElementById('enableTotpBtn').hidden = enabled;
+  document.getElementById('disableTotpBtn').hidden = !enabled;
+  document.getElementById('totpSetupPanel').hidden = true;
+  document.getElementById('totpDisablePanel').hidden = true;
+}
+
+async function loadTotpStatus() {
+  const session = await api.get('/api/session');
+  setTotpStatusUi(!!session.totpEnabled);
+}
+
+document.getElementById('enableTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('totpSetupMsg');
+  msg.textContent = '';
+  try {
+    const { secret, otpauthUrl } = await api.post('/api/admin-2fa/setup');
+    document.getElementById('totpSecretText').textContent = secret;
+    document.getElementById('totpConfirmCode').value = '';
+    window.renderTotpQr(document.getElementById('totpQrContainer'), otpauthUrl);
+    document.getElementById('totpSetupPanel').hidden = false;
+    document.getElementById('totpDisablePanel').hidden = true;
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('cancelTotpSetupBtn').addEventListener('click', () => {
+  document.getElementById('totpSetupPanel').hidden = true;
+  document.getElementById('totpSetupMsg').textContent = '';
+});
+
+document.getElementById('confirmTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('totpSetupMsg');
+  msg.textContent = '';
+  const token = document.getElementById('totpConfirmCode').value.trim();
+  try {
+    await api.post('/api/admin-2fa/confirm', { token });
+    await loadTotpStatus();
+    await loadAdminsTable();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Two-factor authentication is now enabled.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('disableTotpBtn').addEventListener('click', () => {
+  document.getElementById('totpDisableCode').value = '';
+  document.getElementById('totpDisablePanel').hidden = false;
+  document.getElementById('totpSetupPanel').hidden = true;
+});
+
+document.getElementById('cancelTotpDisableBtn').addEventListener('click', () => {
+  document.getElementById('totpDisablePanel').hidden = true;
+  document.getElementById('totpSetupMsg').textContent = '';
+});
+
+document.getElementById('confirmDisableTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('totpSetupMsg');
+  msg.textContent = '';
+  const token = document.getElementById('totpDisableCode').value.trim();
+  try {
+    await api.post('/api/admin-2fa/disable', { token });
+    await loadTotpStatus();
+    await loadAdminsTable();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Two-factor authentication is now disabled.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
 // ---------- Admin accounts ----------
 async function loadMyUsername() {
   const session = await api.get('/api/session');
@@ -562,9 +674,13 @@ async function loadAdminsTable() {
     const statusPill = a.mustChangePassword
       ? '<span class="pill mute"><span class="dot"></span>Must change password</span>'
       : '<span class="pill ok"><span class="dot"></span>Active</span>';
+    const totpPill = a.totpEnabled
+      ? '<span class="pill ok"><span class="dot"></span>On</span>'
+      : '<span class="pill mute"><span class="dot"></span>Off</span>';
     tr.innerHTML = `
       <td>${escapeHtml(a.username)}${a.isSelf ? ' <span class="hint">(you)</span>' : ''}</td>
       <td>${statusPill}</td>
+      <td>${totpPill}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
@@ -928,6 +1044,49 @@ function closeUserModal() {
   document.getElementById('userModalBackdrop').classList.remove('open');
 }
 
+document.getElementById('downloadUserTemplateBtn').addEventListener('click', () => {
+  const template =
+    'username,password,authMethod,permission,defaultPort,publicKey\n' +
+    'alice,changeme123,password,read-write,,\n' +
+    'bob,,publickey,read-only,,"ssh-ed25519 AAAA... bob@laptop"\n';
+  const blob = new Blob([template], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'users-template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importUsersBtn').addEventListener('click', () => {
+  document.getElementById('importUsersInput').click();
+});
+
+document.getElementById('importUsersInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const msg = document.getElementById('importUsersMsg');
+  msg.textContent = '';
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await fetch('/api/users/import', { method: 'POST', body: formData });
+    if (!res.ok) throw await apiError(res);
+    const result = await res.json();
+    let summary = `Imported ${result.created.length} user${result.created.length === 1 ? '' : 's'}.`;
+    if (result.skipped.length) {
+      summary +=
+        `\n\nSkipped ${result.skipped.length}:\n` +
+        result.skipped.map((s) => `Row ${s.row} (${s.username}): ${s.reason}`).join('\n');
+    }
+    alert(summary);
+    await loadUsersTable();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
 document.getElementById('addUserBtn').addEventListener('click', () => openUserModal(null));
 document.getElementById('cancelUserBtn').addEventListener('click', closeUserModal);
 document.getElementById('userUsername').addEventListener('input', () => clearFieldError('userUsername'));
@@ -1126,6 +1285,7 @@ async function initApp() {
   await loadUsersTable();
   await loadMyUsername();
   await loadAdminsTable();
+  await loadTotpStatus();
   await loadVersion();
   renderSessions(await api.get('/api/sessions'));
   renderStats(await api.get('/api/stats'));

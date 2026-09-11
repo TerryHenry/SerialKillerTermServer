@@ -604,6 +604,24 @@
           <li><strong>Default port</strong> &mdash; assign one and the user is dropped straight into it on login, no menu, ever. Leave it unset and they see the port picker (if it's enabled) instead.</li>
         </ul>
       </div>
+      <div class="card">
+        <h4>Import from CSV</h4>
+        <p><strong>Import from CSV&hellip;</strong> bulk-creates accounts from a spreadsheet instead of adding them one at a time &mdash; handy for provisioning a whole class or team roster at once. <strong>Download CSV Template</strong> gives you a starting file with the right headers and a couple of example rows.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>username</code></td><td>Required.</td></tr>
+              <tr><td><code>password</code></td><td>Required unless <code>authMethod</code> is <code>publickey</code>.</td></tr>
+              <tr><td><code>authMethod</code></td><td><code>password</code> / <code>publickey</code> / <code>both</code>. Left blank, it's guessed from whichever of <code>password</code>/<code>publicKey</code> is filled in.</td></tr>
+              <tr><td><code>permission</code></td><td><code>read-write</code> / <code>read-only</code>. Defaults to <code>read-write</code>.</td></tr>
+              <tr><td><code>defaultPort</code></td><td>Matches a port by its <strong>label</strong> (not device path). Leave blank for the port picker.</td></tr>
+              <tr><td><code>publicKey</code></td><td>Required unless <code>authMethod</code> is <code>password</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Only ever <em>creates</em> accounts &mdash; a row naming a username that already exists is skipped, not overwritten, so re-running an import (or a typo'd re-upload) can't silently reset anyone's credentials. After it runs, you'll see exactly which rows were created and which were skipped, and why.</p>
+      </div>
     </section>
 
     <section id="tab-sessions">
@@ -626,6 +644,15 @@
       <div class="card">
         <h4>My Account</h4>
         <p>Change your own password here at any time &mdash; independent of the forced first-login change covered earlier.</p>
+      </div>
+      <div class="card">
+        <h4>Two-Factor Authentication</h4>
+        <p>Optional, off by default, per admin account. Once on, logging in needs a password <em>and</em> a fresh 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password, and similar all work &mdash; anything that speaks standard TOTP).</p>
+        <ul>
+          <li><strong>Enable 2FA</strong> shows a QR code and a manual-entry secret. Scan it (or type the secret in by hand), then enter the code your app generates to confirm &mdash; it only actually turns on once that first code checks out, so a botched scan can't lock you out immediately.</li>
+          <li><strong>Disable 2FA</strong> asks for a current code before it takes effect, the same as enabling does.</li>
+          <li>The <strong>Admin Accounts</strong> table below shows a 2FA column so you can see at a glance which admins have it on.</li>
+        </ul>
       </div>
       <div class="card">
         <h4>Admin Accounts</h4>
@@ -748,7 +775,11 @@ tftp terminalserver.local
       </div>
       <div class="card">
         <h4>The web login locks out after repeated failures</h4>
-        <p>Five failed attempts for a given username from a given address lock that pair out for five minutes &mdash; even a subsequently-correct password is rejected until the lockout clears. Basic brute-force protection, tracked in memory only, so it resets on a service restart.</p>
+        <p>Five failed attempts for a given username from a given address lock that pair out for five minutes &mdash; even a subsequently-correct password is rejected until the lockout clears. Basic brute-force protection, tracked in memory only, so it resets on a service restart. The same throttling applies separately to guessing a 6-digit 2FA code once a password has already checked out.</p>
+      </div>
+      <div class="card">
+        <h4>Turn on two-factor authentication</h4>
+        <p>Especially worth doing on any admin account reachable beyond your own LAN &mdash; see <a href="#tab-admin">My Account</a>. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
       </div>
     </section>
 
@@ -777,6 +808,10 @@ tftp terminalserver.local
             <tr>
               <td>Locked out of the web admin UI</td>
               <td>There's no self-service reset. Someone with SSH access to the Pi (port 22) can delete <code>/opt/terminalserver/data/config.json</code>'s <code>web</code> section values or restore from a backup to re-trigger setup &mdash; back up that file once you've configured things.</td>
+            </tr>
+            <tr>
+              <td>Lost your 2FA device, can't get past the code prompt</td>
+              <td>2FA is self-service by design &mdash; only the account owner can turn it on or off, even another admin can't do it for you. Recovery is the same SSH-based fix as a lost admin password: over SSH on port 22, edit <code>/opt/terminalserver/data/config.json</code> and set that admin's <code>totpEnabled</code> to <code>false</code> (and clear <code>totpSecret</code>), then restart <code>terminalserver.service</code>.</td>
             </tr>
             <tr>
               <td>Can't log into <code>/terminal</code> with an admin account</td>

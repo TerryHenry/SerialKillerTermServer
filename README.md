@@ -40,6 +40,13 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   (password and/or SSH public-key auth), SSH server settings, TFTP, and view
   live sessions/logs. Supports multiple admin accounts (not just one shared
   login), and login attempts are throttled after repeated failures.
+  Optional TOTP-based two-factor authentication (Google Authenticator,
+  Authy, 1Password, etc.) can be turned on per admin account from My
+  Account — off by default.
+- **Bulk user import** — add a whole roster of console accounts at once
+  from a CSV file (Users tab), instead of one-by-one through the form.
+  Only ever creates new accounts; a username that already exists is
+  skipped, never overwritten.
 - **Dashboard tab** — live CPU, memory, and disk usage, total connected
   clients, and a live status (present/missing) and client count for every
   configured serial port.
@@ -155,3 +162,15 @@ its own first-boot provisioning.
   Ethernet or Wi-Fi, ends up carrying traffic. The Network tab's DNS field
   always reflects what's actually in effect (read from `/etc/resolv.conf`),
   whether that came from DHCP or an override set here.
+- Two-factor auth (TOTP) is implemented in-house against RFC 4226/6238
+  directly on Node's built-in `crypto` (`lib/totp.js`, verified against the
+  official RFC 4226 test vectors) rather than pulling in a dependency for
+  it. Lost your authenticator device with no other admin account to help?
+  Same recovery path as a lost admin password: edit
+  `/opt/terminalserver/data/config.json` over SSH on port 22 (clear that
+  admin's `totpEnabled`/`totpSecret`) and restart the service.
+- `npm audit` is clean except one moderate `qs`/`express` advisory that
+  can't be resolved without a major Express 4→5 upgrade — a bigger, separate
+  effort given how much routing/middleware behavior a major version bump
+  touches. Everything else (including the `multer` DoS advisories) is
+  patched.
