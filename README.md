@@ -71,7 +71,10 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 - **Backup &amp; restore** — export the full config (ports, users, admin
   accounts, settings) as a single file and restore it later, optionally
   including the SSH host key so a restore reproduces the same host-key
-  fingerprint instead of minting a new device identity.
+  fingerprint instead of minting a new device identity. Also covers the
+  NTP server, timezone, and DNS override, since those live outside
+  `config.json` entirely (Wi-Fi credentials are deliberately not included —
+  NetworkManager doesn't expose a saved password through a normal read).
 - **TFTP server** (default port `69`, off by default) — start/stop from the
   TFTP tab in the admin UI. Serves and accepts files (if uploads are
   enabled) from `/opt/terminalserver/data/tftp`, e.g. for pushing firmware

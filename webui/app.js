@@ -677,11 +677,13 @@ document.getElementById('restoreInput').addEventListener('change', async (e) => 
     const res = await fetch('/api/restore', { method: 'POST', body: formData });
     if (!res.ok) throw await apiError(res);
     const result = await res.json();
-    alert(
-      result.hostKeyRestored
-        ? 'Restore complete, including the SSH host key (takes effect after the service restarts). Reloading.'
-        : 'Restore complete. Reloading.'
-    );
+    let message = result.hostKeyRestored
+      ? 'Restore complete, including the SSH host key (takes effect after the service restarts).'
+      : 'Restore complete.';
+    if (result.systemSettingsWarnings && result.systemSettingsWarnings.length) {
+      message += `\n\nEverything else restored, but these system settings need a look:\n${result.systemSettingsWarnings.join('\n')}`;
+    }
+    alert(`${message} Reloading.`);
     window.location.reload();
   } catch (err) {
     msg.textContent = err.message;
