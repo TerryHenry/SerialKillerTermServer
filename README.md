@@ -41,8 +41,11 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   live sessions/logs. Supports multiple admin accounts (not just one shared
   login), and login attempts are throttled after repeated failures.
   Optional TOTP-based two-factor authentication (Google Authenticator,
-  Authy, 1Password, etc.) can be turned on per admin account from My
-  Account — off by default.
+  Authy, 1Password, etc.), off by default — self-service per admin account
+  from My Account, or admin-managed per console user from the Users tab
+  (SSH prompts for the code via keyboard-interactive right after the
+  password/key check; the web console prompts the same way admin login
+  does).
 - **Bulk user import** — add a whole roster of console accounts at once
   from a CSV file (Users tab), instead of one-by-one through the form.
   Only ever creates new accounts; a username that already exists is

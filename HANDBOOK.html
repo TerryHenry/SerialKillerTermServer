@@ -622,6 +622,11 @@
         </div>
         <p>Only ever <em>creates</em> accounts &mdash; a row naming a username that already exists is skipped, not overwritten, so re-running an import (or a typo'd re-upload) can't silently reset anyone's credentials. After it runs, you'll see exactly which rows were created and which were skipped, and why.</p>
       </div>
+      <div class="card">
+        <h4>Two-Factor Authentication</h4>
+        <p>Optional, off by default, per account &mdash; same idea as admin 2FA, but admin-managed rather than self-service, since console users have no account page of their own to set it up from. Click <strong>Enable 2FA</strong> on a user's row: it shows a QR code and manual-entry secret right there in the admin UI. Scan it into the user's authenticator app (Google Authenticator, Authy, 1Password, and similar all work), then enter the code it generates to confirm &mdash; it only actually turns on once that check succeeds, so a botched scan can't lock the account out immediately.</p>
+        <p><strong>Disable 2FA</strong> turns it off immediately, no code needed &mdash; you already have full control over these accounts (same as resetting their password). Applies to <strong>both</strong> SSH and the web console: once on, SSH prompts for a verification code right after the password or key check succeeds, and the web console shows the same code prompt used for admin login.</p>
+      </div>
     </section>
 
     <section id="tab-sessions">
@@ -719,6 +724,10 @@ Enter port number (or "q" to quit): <span class="c2">1</span></pre>
 
       <h3>If your assigned port isn't available</h3>
       <p>Users with a <em>default port</em> assigned never see the picker menu &mdash; that's deliberate, since they're meant to only ever reach one thing. If that port has been deleted, can't be opened, or drops mid-session, you're disconnected with a clear reason instead of being handed a menu you were never meant to see.</p>
+      <div class="callout tip">
+        <span class="mark">If 2FA is on for your account</span>
+        <p>Your SSH client prompts for a verification code right after your password or key checks out &mdash; standard <code>keyboard-interactive</code> behavior, so a normal <code>ssh</code> client (or PuTTY, etc.) just asks for it inline, no special client setup needed.</p>
+      </div>
     </section>
 
     <section id="connecting-web">
@@ -733,6 +742,7 @@ Enter port number (or "q" to quit): <span class="c2">1</span></pre>
         <li>A user with a <strong>default port</strong> assigned connects straight to it, same as over SSH.</li>
         <li>A user without one sees a port picker in the browser instead (only if the port picker is enabled on the <a href="#tab-server">Server tab</a>) &mdash; by label only, not the underlying device path.</li>
         <li><strong>Read-only</strong> users and read-only/shared port access modes are enforced exactly as they are over SSH &mdash; see <a href="#access-modes">Access modes &amp; permissions</a>.</li>
+        <li>If 2FA is on for your account, a code prompt follows the password screen, same as SSH.</li>
         <li><strong>Disconnect</strong> ends the session and returns to the login screen.</li>
       </ul>
       <div class="callout tip">
@@ -800,7 +810,7 @@ tftp terminalserver.local
       </div>
       <div class="card">
         <h4>Turn on two-factor authentication</h4>
-        <p>Especially worth doing on any admin account reachable beyond your own LAN &mdash; see <a href="#tab-admin">My Account</a>. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
+        <p>Available for admin accounts (self-service, <a href="#tab-admin">My Account</a>) and console users (admin-managed, <a href="#tab-users">Users tab</a>) alike. Especially worth doing for anything reachable beyond your own LAN. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
       </div>
     </section>
 
@@ -831,8 +841,12 @@ tftp terminalserver.local
               <td>There's no self-service reset. Someone with SSH access to the Pi (port 22) can delete <code>/opt/terminalserver/data/config.json</code>'s <code>web</code> section values or restore from a backup to re-trigger setup &mdash; back up that file once you've configured things.</td>
             </tr>
             <tr>
-              <td>Lost your 2FA device, can't get past the code prompt</td>
-              <td>2FA is self-service by design &mdash; only the account owner can turn it on or off, even another admin can't do it for you. Recovery is the same SSH-based fix as a lost admin password: over SSH on port 22, edit <code>/opt/terminalserver/data/config.json</code> and set that admin's <code>totpEnabled</code> to <code>false</code> (and clear <code>totpSecret</code>), then restart <code>terminalserver.service</code>.</td>
+              <td>A console user lost their 2FA device, can't get past the code prompt</td>
+              <td>Any admin can turn it off for them: <a href="#tab-users">Users tab</a> &rarr; <strong>Disable 2FA</strong> on their row, no code needed. Set it back up (a new secret) once they're sorted out.</td>
+            </tr>
+            <tr>
+              <td>An admin lost their 2FA device, can't get past the code prompt</td>
+              <td>Admin 2FA is self-service by design &mdash; only the account owner can turn it on or off, even another admin can't do it for you. Recovery is the same SSH-based fix as a lost admin password: over SSH on port 22, edit <code>/opt/terminalserver/data/config.json</code> and set that admin's <code>totpEnabled</code> to <code>false</code> (and clear <code>totpSecret</code>), then restart <code>terminalserver.service</code>.</td>
             </tr>
             <tr>
               <td>Can't log into <code>/terminal</code> with an admin account</td>

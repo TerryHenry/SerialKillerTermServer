@@ -976,17 +976,25 @@ async function loadUsersTable() {
   tbody.innerHTML = '';
   for (const u of users) {
     const tr = document.createElement('tr');
+    const totpPill = u.totpEnabled
+      ? '<span class="pill ok"><span class="dot"></span>On</span>'
+      : '<span class="pill mute"><span class="dot"></span>Off</span>';
     tr.innerHTML = `
       <td>${escapeHtml(u.username)}</td>
       <td>${escapeHtml(u.authMethod)}</td>
       <td>${permissionPill(u.permission)}</td>
       <td>${u.defaultPortId ? escapeHtml(portById[u.defaultPortId] || '(deleted port)') : '<span class="hint">port menu</span>'}</td>
+      <td>${totpPill}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', () => openUserModal(u));
+    const totpBtn = document.createElement('button');
+    totpBtn.textContent = u.totpEnabled ? 'Disable 2FA' : 'Enable 2FA';
+    totpBtn.style.marginLeft = '6px';
+    totpBtn.addEventListener('click', () => (u.totpEnabled ? disableUserTotp(u) : openUserTotpModal(u)));
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Delete';
     delBtn.className = 'danger';
@@ -998,8 +1006,54 @@ async function loadUsersTable() {
       }
     });
     actionsCell.appendChild(editBtn);
+    actionsCell.appendChild(totpBtn);
     actionsCell.appendChild(delBtn);
     tbody.appendChild(tr);
+  }
+}
+
+// ---------- Per-user two-factor auth (admin-managed) ----------
+async function openUserTotpModal(user) {
+  const msg = document.getElementById('userTotpSetupMsg');
+  msg.textContent = '';
+  document.getElementById('userTotpUsername').textContent = user.username;
+  document.getElementById('userTotpConfirmCode').value = '';
+  try {
+    const { secret, otpauthUrl } = await api.post(`/api/users/${user.id}/2fa/setup`);
+    document.getElementById('userTotpSecretText').textContent = secret;
+    window.renderTotpQr(document.getElementById('userTotpQrContainer'), otpauthUrl);
+    document.getElementById('userTotpModalBackdrop').dataset.userId = user.id;
+    document.getElementById('userTotpModalBackdrop').classList.add('open');
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+document.getElementById('cancelUserTotpBtn').addEventListener('click', () => {
+  document.getElementById('userTotpModalBackdrop').classList.remove('open');
+});
+
+document.getElementById('confirmUserTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('userTotpSetupMsg');
+  msg.textContent = '';
+  const userId = document.getElementById('userTotpModalBackdrop').dataset.userId;
+  const token = document.getElementById('userTotpConfirmCode').value.trim();
+  try {
+    await api.post(`/api/users/${userId}/2fa/confirm`, { token });
+    document.getElementById('userTotpModalBackdrop').classList.remove('open');
+    await loadUsersTable();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+async function disableUserTotp(user) {
+  if (!confirm(`Disable two-factor authentication for "${user.username}"?`)) return;
+  try {
+    await api.post(`/api/users/${user.id}/2fa/disable`);
+    await loadUsersTable();
+  } catch (err) {
+    alert(err.message);
   }
 }
 

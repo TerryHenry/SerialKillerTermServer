@@ -1,12 +1,13 @@
 'use strict';
 
 const loginScreen = document.getElementById('loginScreen');
+const totpScreen = document.getElementById('totpScreen');
 const portPickerScreen = document.getElementById('portPickerScreen');
 const terminalScreen = document.getElementById('terminalScreen');
 const disabledScreen = document.getElementById('disabledScreen');
 
 function showScreen(el) {
-  [loginScreen, portPickerScreen, terminalScreen, disabledScreen].forEach((s) => s.classList.remove('active'));
+  [loginScreen, totpScreen, portPickerScreen, terminalScreen, disabledScreen].forEach((s) => s.classList.remove('active'));
   el.classList.add('active');
 }
 
@@ -28,6 +29,14 @@ async function apiGet(url) {
   return data;
 }
 
+async function afterLogin(result) {
+  if (result.needsPortSelection) {
+    await showPortPicker();
+  } else {
+    connectTerminal();
+  }
+}
+
 document.getElementById('terminalLoginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const errorEl = document.getElementById('terminalLoginError');
@@ -37,13 +46,28 @@ document.getElementById('terminalLoginForm').addEventListener('submit', async (e
   try {
     const result = await apiPost('/api/terminal/login', { username, password });
     document.getElementById('terminalPassword').value = '';
-    if (result.needsPortSelection) {
-      await showPortPicker();
-    } else {
-      connectTerminal();
+    if (result.needsTotp) {
+      document.getElementById('terminalTotpCode').value = '';
+      showScreen(totpScreen);
+      return;
     }
+    await afterLogin(result);
   } catch (err) {
     errorEl.textContent = err.message;
+  }
+});
+
+document.getElementById('terminalTotpForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('terminalTotpError');
+  errorEl.textContent = '';
+  try {
+    const result = await apiPost('/api/terminal/login-totp', { token: document.getElementById('terminalTotpCode').value.trim() });
+    await afterLogin(result);
+  } catch (err) {
+    errorEl.textContent = err.message === 'invalid_code' ? 'Wrong code. Try again.' : err.message;
+    document.getElementById('terminalTotpCode').value = '';
+    document.getElementById('terminalTotpCode').focus();
   }
 });
 
@@ -139,6 +163,10 @@ document.getElementById('terminalDisconnectBtn').addEventListener('click', async
     const session = await apiGet('/api/terminal/session');
     if (!session.enabled) {
       showScreen(disabledScreen);
+      return;
+    }
+    if (session.needsTotp) {
+      showScreen(totpScreen);
       return;
     }
     if (session.authenticated) {

@@ -329,7 +329,7 @@
         <h2>Users</h2>
         <p class="hint">These accounts can connect over SSH, and over the web too if the Web Console is enabled on the Server tab.</p>
         <table class="data-table" id="usersTable">
-          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th></th></tr></thead>
+          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th>2FA</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="field-row">
@@ -553,6 +553,29 @@
       <div class="modal-actions">
         <button id="cancelUserBtn" class="secondary">Cancel</button>
         <button id="saveUserBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-user 2FA setup modal (admin-managed -- console users have no account page of
+       their own to do this from) -->
+  <div class="modal-backdrop" id="userTotpModalBackdrop">
+    <div class="modal">
+      <h3>Enable Two-Factor Authentication</h3>
+      <p class="hint">For <strong id="userTotpUsername"></strong>. Scan this with an authenticator app (Google Authenticator, Authy, 1Password, etc.), or enter the code manually, then confirm with the 6-digit code it generates.</p>
+      <div id="userTotpQrContainer"></div>
+      <div class="field-row column">
+        <label>Manual entry code</label>
+        <code id="userTotpSecretText"></code>
+      </div>
+      <div class="field-row column">
+        <label for="userTotpConfirmCode">6-digit code</label>
+        <input type="text" id="userTotpConfirmCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
+      </div>
+      <div class="auth-error" id="userTotpSetupMsg"></div>
+      <div class="modal-actions">
+        <button id="cancelUserTotpBtn" class="secondary">Cancel</button>
+        <button id="confirmUserTotpBtn" class="primary">Confirm &amp; Enable</button>
       </div>
     </div>
   </div>
