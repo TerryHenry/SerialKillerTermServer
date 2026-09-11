@@ -1,6 +1,6 @@
 {
   "name": "serial-killer-terminal-server",
-  "version": "0926-5",
+  "version": "0926-6",
   "description": "Serial Killer Terminal Server — SSH-to-serial console server appliance for Raspberry Pi.",
   "main": "server.js",
   "private": true,
