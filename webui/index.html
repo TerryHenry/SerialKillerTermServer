@@ -208,6 +208,36 @@
       </div>
 
       <div class="panel">
+        <h2>Static IP</h2>
+        <div class="field-row">
+          <label for="staticIpDevice">Interface</label>
+          <select id="staticIpDevice"></select>
+          <span class="status-pill" id="staticIpModePill">
+            <span class="dot"></span>
+            <span id="staticIpModeText">&mdash;</span>
+          </span>
+        </div>
+        <div class="field-row">
+          <label for="staticIpAddress">IP Address</label>
+          <input type="text" id="staticIpAddress" placeholder="192.168.1.50" autocomplete="off" />
+        </div>
+        <div class="field-row">
+          <label for="staticIpMask">Subnet Mask</label>
+          <input type="text" id="staticIpMask" placeholder="255.255.255.0" autocomplete="off" />
+        </div>
+        <div class="field-row">
+          <label for="staticIpGateway">Gateway</label>
+          <input type="text" id="staticIpGateway" placeholder="192.168.1.1" autocomplete="off" />
+        </div>
+        <div class="field-row">
+          <button id="saveStaticIpBtn" class="primary">Save</button>
+          <button id="clearStaticIpBtn" class="secondary">Use DHCP</button>
+        </div>
+        <p class="hint">A wrong address, mask, or gateway here can disconnect this interface from the network entirely, including cutting off the admin UI if you're reaching it through this interface. Double-check before saving &mdash; recovery needs SSH on port 22 (via a different interface, if there is one) or the physical console.</p>
+        <div class="auth-error" id="staticIpMsg"></div>
+      </div>
+
+      <div class="panel">
         <h2>Wi-Fi</h2>
         <div class="field-row">
           <span>Radio</span>
@@ -329,7 +359,7 @@
         <h2>Users</h2>
         <p class="hint">These accounts can connect over SSH, and over the web too if the Web Console is enabled on the Server tab.</p>
         <table class="data-table" id="usersTable">
-          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th></th></tr></thead>
+          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th>2FA</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="field-row">
@@ -376,6 +406,23 @@
           <button id="changeAdminPasswordBtn">Change Password</button>
         </div>
         <div class="auth-error" id="adminPasswordMsg"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Pi System Account</h2>
+        <p class="hint">The Linux <code>admin</code> account used for SSH on port 22 (normal shell access to the Pi itself) &mdash; separate from this web login and from the SSH-to-serial console users. Not force-rotated automatically the way this web login is, so change it from the default at some point.</p>
+        <div class="field-row column">
+          <label for="osPassword">New password</label>
+          <input type="password" id="osPassword" minlength="8" />
+        </div>
+        <div class="field-row column">
+          <label for="osPasswordConfirm">Confirm new password</label>
+          <input type="password" id="osPasswordConfirm" minlength="8" />
+        </div>
+        <div class="field-row">
+          <button id="changeOsPasswordBtn">Change Password</button>
+        </div>
+        <div class="auth-error" id="osPasswordMsg"></div>
       </div>
 
       <div class="panel">
@@ -553,6 +600,29 @@
       <div class="modal-actions">
         <button id="cancelUserBtn" class="secondary">Cancel</button>
         <button id="saveUserBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-user 2FA setup modal (admin-managed -- console users have no account page of
+       their own to do this from) -->
+  <div class="modal-backdrop" id="userTotpModalBackdrop">
+    <div class="modal">
+      <h3>Enable Two-Factor Authentication</h3>
+      <p class="hint">For <strong id="userTotpUsername"></strong>. Scan this with an authenticator app (Google Authenticator, Authy, 1Password, etc.), or enter the code manually, then confirm with the 6-digit code it generates.</p>
+      <div id="userTotpQrContainer"></div>
+      <div class="field-row column">
+        <label>Manual entry code</label>
+        <code id="userTotpSecretText"></code>
+      </div>
+      <div class="field-row column">
+        <label for="userTotpConfirmCode">6-digit code</label>
+        <input type="text" id="userTotpConfirmCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" />
+      </div>
+      <div class="auth-error" id="userTotpSetupMsg"></div>
+      <div class="modal-actions">
+        <button id="cancelUserTotpBtn" class="secondary">Cancel</button>
+        <button id="confirmUserTotpBtn" class="primary">Confirm &amp; Enable</button>
       </div>
     </div>
   </div>

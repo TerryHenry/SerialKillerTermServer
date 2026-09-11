@@ -38,6 +38,19 @@
     </form>
   </div>
 
+  <!-- Second factor: shown after a correct password when the account has 2FA enabled -->
+  <div class="auth-screen" id="totpScreen">
+    <form class="auth-card" id="terminalTotpForm">
+      <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
+      <h1>Two-Factor Authentication</h1>
+      <p class="hint">Enter the 6-digit code from your authenticator app.</p>
+      <label>Code</label>
+      <input type="text" id="terminalTotpCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required />
+      <div class="auth-error" id="terminalTotpError"></div>
+      <button type="submit" class="primary">Verify</button>
+    </form>
+  </div>
+
   <!-- Port picker (only shown when the user has no fixed assigned port) -->
   <div class="auth-screen" id="portPickerScreen">
     <div class="auth-card">

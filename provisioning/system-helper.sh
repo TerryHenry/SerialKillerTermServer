@@ -71,8 +71,43 @@ case "${1:-}" in
     # owns /opt/terminalserver; this is the one step that genuinely needs root.
     exec systemctl restart terminalserver.service
     ;;
+  ip-set)
+    # The connection name (not the device name) is passed in, already resolved
+    # device->connection on the Node side via the same colon-escaping-aware nmcli
+    # parsing getInterfaces() already does -- this script just trusts that resolution
+    # and re-validates the IP-shaped values, since it's the actual privilege boundary.
+    conn="${2:?connection name required}"
+    address="${3:?ip address required}"
+    prefix="${4:?prefix required}"
+    gateway="${5:?gateway required}"
+    for v in "$address" "$gateway"; do
+      case "$v" in
+        *[!0-9.]*|'') echo "not an IPv4 address: $v" >&2; exit 1 ;;
+      esac
+    done
+    case "$prefix" in
+      ''|*[!0-9]*) echo "invalid prefix length: $prefix" >&2; exit 1 ;;
+    esac
+    nmcli connection modify "$conn" ipv4.method manual ipv4.addresses "$address/$prefix" ipv4.gateway "$gateway"
+    exec nmcli connection up "$conn"
+    ;;
+  ip-clear)
+    conn="${2:?connection name required}"
+    nmcli connection modify "$conn" ipv4.method auto ipv4.addresses "" ipv4.gateway ""
+    exec nmcli connection up "$conn"
+    ;;
+  os-password-set)
+    # The new password is read from stdin (chpasswd's own interface), not argv -- argv
+    # values are briefly visible to other local processes via the process list, and
+    # there's no reason to accept that exposure when chpasswd already reads from stdin
+    # natively. Only ever targets the fixed "admin" account created at first boot, never
+    # a caller-supplied username.
+    password="$(cat)"
+    [ -n "$password" ] || { echo "password required" >&2; exit 1; }
+    printf 'admin:%s\n' "$password" | chpasswd
+    ;;
   *)
-    echo "usage: system-helper.sh {enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart}" >&2
+    echo "usage: system-helper.sh {enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set}" >&2
     exit 1
     ;;
 esac

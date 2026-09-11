@@ -41,8 +41,11 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   live sessions/logs. Supports multiple admin accounts (not just one shared
   login), and login attempts are throttled after repeated failures.
   Optional TOTP-based two-factor authentication (Google Authenticator,
-  Authy, 1Password, etc.) can be turned on per admin account from My
-  Account — off by default.
+  Authy, 1Password, etc.), off by default — self-service per admin account
+  from My Account, or admin-managed per console user from the Users tab
+  (SSH prompts for the code via keyboard-interactive right after the
+  password/key check; the web console prompts the same way admin login
+  does).
 - **Bulk user import** — add a whole roster of console accounts at once
   from a CSV file (Users tab), instead of one-by-one through the form.
   Only ever creates new accounts; a username that already exists is
@@ -62,7 +65,11 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   network (scan or type an SSID + password) directly from the admin UI.
   Also sets the **NTP server** (defaults to `pool.ntp.org`, with a live
   synced/not-synced status), the **timezone**, and a **DNS override** (or
-  hand DNS back to whatever DHCP provides).
+  hand DNS back to whatever DHCP provides). **Static IP** lets you assign a
+  fixed address/subnet mask/gateway per interface, or revert one to DHCP —
+  a wrong value here can take that interface (and the admin UI, if you're
+  on it) off the network, so it's not included in backup/restore and needs
+  SSH or the physical console to recover from if it goes wrong.
 - **Web-based serial console** (`https://<pi>:8443/terminal`) — the same
   users configured in the Users tab can also get a serial console straight
   in the browser (xterm.js, no extra software), alongside SSH access. Users
@@ -102,9 +109,10 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   the Pi itself, under a default Linux account (`admin` / `letmein0!`,
   same credentials as the web UI's default login) created during first boot
   so Raspberry Pi OS's own mandatory first-run account-creation prompt
-  (`userconfig.service`) doesn't block on the physical console. Change it
-  with `passwd` once logged in — unlike the web UI's admin password, this
-  one isn't force-rotated for you.
+  (`userconfig.service`) doesn't block on the physical console. Change its
+  password from Admin Account → Pi System Account in the web UI, or with
+  `passwd` once logged in over SSH — unlike the web UI's admin password,
+  this one isn't force-rotated for you.
 
 
 Images:

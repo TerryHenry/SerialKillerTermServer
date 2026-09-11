@@ -538,6 +538,14 @@
         </ul>
       </div>
       <div class="card">
+        <h4>Static IP</h4>
+        <p>Pick an interface from the dropdown to see and change its addressing. The pill shows whether it's currently <strong>DHCP</strong> or <strong>Static</strong>. Fill in an <strong>IP Address</strong>, <strong>Subnet Mask</strong> (dotted-decimal, e.g. <code>255.255.255.0</code>, not a <code>/24</code>-style prefix), and <strong>Gateway</strong>, then <strong>Save</strong>. <strong>Use DHCP</strong> reverts that interface back to automatic addressing.</p>
+      </div>
+      <div class="callout warn">
+        <span class="mark">This can lock you out</span>
+        <p>A wrong address, mask, or gateway can take the interface off the network entirely &mdash; including cutting off this admin UI, if you're reaching it through that same interface. Double-check every field before saving. If it does go wrong, recovery needs SSH on port 22 (through a different interface, if the Pi has one) or the physical console &mdash; <code>nmcli connection show</code> and <code>nmcli connection modify &lt;name&gt; ipv4.method auto</code> put it back on DHCP from there.</p>
+      </div>
+      <div class="card">
         <h4>Wi-Fi</h4>
         <p><strong>Enable/Disable Wi-Fi</strong> toggles the radio itself. <strong>Scan for Networks</strong> lists nearby SSIDs with signal strength and security type &mdash; click <strong>Use</strong> on one to fill in its SSID, then enter the password and <strong>Connect</strong>. You can also just type an SSID directly if it's hidden or out of range of the scan.</p>
       </div>
@@ -551,7 +559,7 @@
       </div>
       <div class="callout tip">
         <span class="mark">Under the hood</span>
-        <p>The app itself runs as an unprivileged system account. Wi-Fi, DNS, NTP, and timezone changes all go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant.</p>
+        <p>The app itself runs as an unprivileged system account. Wi-Fi, static IP, DNS, NTP, and timezone changes all go through one narrowly-scoped, fixed-purpose helper script that a <code>sudoers.d</code> rule (validated with <code>visudo</code> before it's ever installed) permits that account to run as root &mdash; never a broad or wildcard <code>sudo</code> grant. Static IP settings aren't included in <a href="#tab-server">Backup &amp; Restore</a> on purpose &mdash; blindly reapplying a saved address to a Pi that's since moved to a different network is more likely to strand it than help it.</p>
       </div>
     </section>
 
@@ -622,6 +630,11 @@
         </div>
         <p>Only ever <em>creates</em> accounts &mdash; a row naming a username that already exists is skipped, not overwritten, so re-running an import (or a typo'd re-upload) can't silently reset anyone's credentials. After it runs, you'll see exactly which rows were created and which were skipped, and why.</p>
       </div>
+      <div class="card">
+        <h4>Two-Factor Authentication</h4>
+        <p>Optional, off by default, per account &mdash; same idea as admin 2FA, but admin-managed rather than self-service, since console users have no account page of their own to set it up from. Click <strong>Enable 2FA</strong> on a user's row: it shows a QR code and manual-entry secret right there in the admin UI. Scan it into the user's authenticator app (Google Authenticator, Authy, 1Password, and similar all work), then enter the code it generates to confirm &mdash; it only actually turns on once that check succeeds, so a botched scan can't lock the account out immediately.</p>
+        <p><strong>Disable 2FA</strong> turns it off immediately, no code needed &mdash; you already have full control over these accounts (same as resetting their password). Applies to <strong>both</strong> SSH and the web console: once on, SSH prompts for a verification code right after the password or key check succeeds, and the web console shows the same code prompt used for admin login.</p>
+      </div>
     </section>
 
     <section id="tab-sessions">
@@ -644,6 +657,10 @@
       <div class="card">
         <h4>My Account</h4>
         <p>Change your own password here at any time &mdash; independent of the forced first-login change covered earlier.</p>
+      </div>
+      <div class="card">
+        <h4>Pi System Account</h4>
+        <p>Changes the password for the underlying Linux <code>admin</code> account (SSH on port 22, normal shell access to the Pi itself) &mdash; a completely different account from this web login and from the console users on the <a href="#tab-users">Users tab</a>. Unlike this web login's password, it isn't force-rotated for you, so it's worth changing from the default at some point.</p>
       </div>
       <div class="card">
         <h4>Two-Factor Authentication</h4>
@@ -719,6 +736,10 @@ Enter port number (or "q" to quit): <span class="c2">1</span></pre>
 
       <h3>If your assigned port isn't available</h3>
       <p>Users with a <em>default port</em> assigned never see the picker menu &mdash; that's deliberate, since they're meant to only ever reach one thing. If that port has been deleted, can't be opened, or drops mid-session, you're disconnected with a clear reason instead of being handed a menu you were never meant to see.</p>
+      <div class="callout tip">
+        <span class="mark">If 2FA is on for your account</span>
+        <p>Your SSH client prompts for a verification code right after your password or key checks out &mdash; standard <code>keyboard-interactive</code> behavior, so a normal <code>ssh</code> client (or PuTTY, etc.) just asks for it inline, no special client setup needed.</p>
+      </div>
     </section>
 
     <section id="connecting-web">
@@ -733,6 +754,7 @@ Enter port number (or "q" to quit): <span class="c2">1</span></pre>
         <li>A user with a <strong>default port</strong> assigned connects straight to it, same as over SSH.</li>
         <li>A user without one sees a port picker in the browser instead (only if the port picker is enabled on the <a href="#tab-server">Server tab</a>) &mdash; by label only, not the underlying device path.</li>
         <li><strong>Read-only</strong> users and read-only/shared port access modes are enforced exactly as they are over SSH &mdash; see <a href="#access-modes">Access modes &amp; permissions</a>.</li>
+        <li>If 2FA is on for your account, a code prompt follows the password screen, same as SSH.</li>
         <li><strong>Disconnect</strong> ends the session and returns to the login screen.</li>
       </ul>
       <div class="callout tip">
@@ -784,7 +806,7 @@ tftp terminalserver.local
       <h2>Security notes</h2>
       <div class="card">
         <h4>Change the Linux account password too</h4>
-        <p>The web UI forces a password change on first login; the underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) does not. Run <code>passwd</code> after logging in over SSH on port 22 if you haven't already.</p>
+        <p>The web UI forces a password change on first login; the underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) does not. Change it from <strong>Admin Account &rarr; Pi System Account</strong> in the web UI, or run <code>passwd</code> after logging in over SSH on port 22 &mdash; either works, they're changing the same account.</p>
       </div>
       <div class="card">
         <h4>The web UI's certificate is self-signed</h4>
@@ -800,7 +822,7 @@ tftp terminalserver.local
       </div>
       <div class="card">
         <h4>Turn on two-factor authentication</h4>
-        <p>Especially worth doing on any admin account reachable beyond your own LAN &mdash; see <a href="#tab-admin">My Account</a>. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
+        <p>Available for admin accounts (self-service, <a href="#tab-admin">My Account</a>) and console users (admin-managed, <a href="#tab-users">Users tab</a>) alike. Especially worth doing for anything reachable beyond your own LAN. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
       </div>
     </section>
 
@@ -831,8 +853,12 @@ tftp terminalserver.local
               <td>There's no self-service reset. Someone with SSH access to the Pi (port 22) can delete <code>/opt/terminalserver/data/config.json</code>'s <code>web</code> section values or restore from a backup to re-trigger setup &mdash; back up that file once you've configured things.</td>
             </tr>
             <tr>
-              <td>Lost your 2FA device, can't get past the code prompt</td>
-              <td>2FA is self-service by design &mdash; only the account owner can turn it on or off, even another admin can't do it for you. Recovery is the same SSH-based fix as a lost admin password: over SSH on port 22, edit <code>/opt/terminalserver/data/config.json</code> and set that admin's <code>totpEnabled</code> to <code>false</code> (and clear <code>totpSecret</code>), then restart <code>terminalserver.service</code>.</td>
+              <td>A console user lost their 2FA device, can't get past the code prompt</td>
+              <td>Any admin can turn it off for them: <a href="#tab-users">Users tab</a> &rarr; <strong>Disable 2FA</strong> on their row, no code needed. Set it back up (a new secret) once they're sorted out.</td>
+            </tr>
+            <tr>
+              <td>An admin lost their 2FA device, can't get past the code prompt</td>
+              <td>Admin 2FA is self-service by design &mdash; only the account owner can turn it on or off, even another admin can't do it for you. Recovery is the same SSH-based fix as a lost admin password: over SSH on port 22, edit <code>/opt/terminalserver/data/config.json</code> and set that admin's <code>totpEnabled</code> to <code>false</code> (and clear <code>totpSecret</code>), then restart <code>terminalserver.service</code>.</td>
             </tr>
             <tr>
               <td>Can't log into <code>/terminal</code> with an admin account</td>

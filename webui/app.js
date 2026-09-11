@@ -401,9 +401,106 @@ async function loadNetwork() {
   document.getElementById('dnsServers').value = data.dns.join(', ');
   await loadTimezoneList();
   setTimezoneUi(data.timezone);
+  populateStaticIpDevices(data.interfaces);
+  await loadStaticIpConfig();
 }
 
 document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());
+
+// ---------- Static IP ----------
+function prefixToMask(prefix) {
+  const bits = '1'.repeat(prefix).padEnd(32, '0');
+  return [0, 8, 16, 24].map((i) => parseInt(bits.slice(i, i + 8), 2)).join('.');
+}
+
+function populateStaticIpDevices(interfaces) {
+  const select = document.getElementById('staticIpDevice');
+  const previous = select.value;
+  select.innerHTML = interfaces
+    .map((i) => `<option value="${escapeHtml(i.name)}">${escapeHtml(i.name)} (${escapeHtml(i.type)})</option>`)
+    .join('');
+  if (previous && [...select.options].some((o) => o.value === previous)) {
+    select.value = previous;
+  }
+}
+
+async function loadStaticIpConfig() {
+  const device = document.getElementById('staticIpDevice').value;
+  const msg = document.getElementById('staticIpMsg');
+  const pill = document.getElementById('staticIpModePill');
+  const text = document.getElementById('staticIpModeText');
+  msg.textContent = '';
+  if (!device) {
+    pill.classList.remove('running');
+    text.textContent = '—';
+    return;
+  }
+  try {
+    const config = await api.get(`/api/network/interfaces/${encodeURIComponent(device)}/ip-config`);
+    const isManual = config.method === 'manual';
+    pill.classList.toggle('running', isManual);
+    text.textContent = isManual ? 'Static' : 'DHCP';
+    document.getElementById('staticIpAddress').value = config.address || '';
+    document.getElementById('staticIpMask').value = config.prefix != null ? prefixToMask(config.prefix) : '';
+    document.getElementById('staticIpGateway').value = config.gateway || '';
+  } catch (err) {
+    pill.classList.remove('running');
+    text.textContent = '—';
+    document.getElementById('staticIpAddress').value = '';
+    document.getElementById('staticIpMask').value = '';
+    document.getElementById('staticIpGateway').value = '';
+    msg.textContent = err.message;
+  }
+}
+
+document.getElementById('staticIpDevice').addEventListener('change', () => loadStaticIpConfig());
+
+document.getElementById('saveStaticIpBtn').addEventListener('click', async () => {
+  const device = document.getElementById('staticIpDevice').value;
+  const msg = document.getElementById('staticIpMsg');
+  msg.textContent = '';
+  if (!device) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Choose an interface first.';
+    return;
+  }
+  const address = document.getElementById('staticIpAddress').value.trim();
+  const mask = document.getElementById('staticIpMask').value.trim();
+  const gateway = document.getElementById('staticIpGateway').value.trim();
+  if (
+    !confirm(
+      `Set a static IP on ${device}? If anything here is wrong, this interface -- possibly including this admin UI, if you're reaching it through here -- could become unreachable until someone fixes it via SSH or the physical console.`
+    )
+  ) {
+    return;
+  }
+  try {
+    await api.post(`/api/network/interfaces/${encodeURIComponent(device)}/ip`, { address, mask, gateway });
+    await loadStaticIpConfig();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Saved.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('clearStaticIpBtn').addEventListener('click', async () => {
+  const device = document.getElementById('staticIpDevice').value;
+  const msg = document.getElementById('staticIpMsg');
+  msg.textContent = '';
+  if (!device) return;
+  if (!confirm(`Revert ${device} to DHCP?`)) return;
+  try {
+    await api.post(`/api/network/interfaces/${encodeURIComponent(device)}/ip/clear`);
+    await loadStaticIpConfig();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Reverted to DHCP.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
 
 document.getElementById('toggleWifiBtn').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
@@ -570,6 +667,29 @@ document.getElementById('changeAdminPasswordBtn').addEventListener('click', asyn
     await api.post('/api/admin-password', { password });
     document.getElementById('newAdminPassword').value = '';
     document.getElementById('newAdminPasswordConfirm').value = '';
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Password updated.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+// ---------- Pi system (Linux) account password ----------
+document.getElementById('changeOsPasswordBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('osPasswordMsg');
+  msg.textContent = '';
+  const password = document.getElementById('osPassword').value;
+  const confirmPassword = document.getElementById('osPasswordConfirm').value;
+  if (password !== confirmPassword) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Passwords do not match.';
+    return;
+  }
+  try {
+    await api.post('/api/os-password', { password });
+    document.getElementById('osPassword').value = '';
+    document.getElementById('osPasswordConfirm').value = '';
     msg.style.color = 'var(--ok)';
     msg.textContent = 'Password updated.';
   } catch (err) {
@@ -976,17 +1096,25 @@ async function loadUsersTable() {
   tbody.innerHTML = '';
   for (const u of users) {
     const tr = document.createElement('tr');
+    const totpPill = u.totpEnabled
+      ? '<span class="pill ok"><span class="dot"></span>On</span>'
+      : '<span class="pill mute"><span class="dot"></span>Off</span>';
     tr.innerHTML = `
       <td>${escapeHtml(u.username)}</td>
       <td>${escapeHtml(u.authMethod)}</td>
       <td>${permissionPill(u.permission)}</td>
       <td>${u.defaultPortId ? escapeHtml(portById[u.defaultPortId] || '(deleted port)') : '<span class="hint">port menu</span>'}</td>
+      <td>${totpPill}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', () => openUserModal(u));
+    const totpBtn = document.createElement('button');
+    totpBtn.textContent = u.totpEnabled ? 'Disable 2FA' : 'Enable 2FA';
+    totpBtn.style.marginLeft = '6px';
+    totpBtn.addEventListener('click', () => (u.totpEnabled ? disableUserTotp(u) : openUserTotpModal(u)));
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Delete';
     delBtn.className = 'danger';
@@ -998,8 +1126,54 @@ async function loadUsersTable() {
       }
     });
     actionsCell.appendChild(editBtn);
+    actionsCell.appendChild(totpBtn);
     actionsCell.appendChild(delBtn);
     tbody.appendChild(tr);
+  }
+}
+
+// ---------- Per-user two-factor auth (admin-managed) ----------
+async function openUserTotpModal(user) {
+  const msg = document.getElementById('userTotpSetupMsg');
+  msg.textContent = '';
+  document.getElementById('userTotpUsername').textContent = user.username;
+  document.getElementById('userTotpConfirmCode').value = '';
+  try {
+    const { secret, otpauthUrl } = await api.post(`/api/users/${user.id}/2fa/setup`);
+    document.getElementById('userTotpSecretText').textContent = secret;
+    window.renderTotpQr(document.getElementById('userTotpQrContainer'), otpauthUrl);
+    document.getElementById('userTotpModalBackdrop').dataset.userId = user.id;
+    document.getElementById('userTotpModalBackdrop').classList.add('open');
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+document.getElementById('cancelUserTotpBtn').addEventListener('click', () => {
+  document.getElementById('userTotpModalBackdrop').classList.remove('open');
+});
+
+document.getElementById('confirmUserTotpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('userTotpSetupMsg');
+  msg.textContent = '';
+  const userId = document.getElementById('userTotpModalBackdrop').dataset.userId;
+  const token = document.getElementById('userTotpConfirmCode').value.trim();
+  try {
+    await api.post(`/api/users/${userId}/2fa/confirm`, { token });
+    document.getElementById('userTotpModalBackdrop').classList.remove('open');
+    await loadUsersTable();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+async function disableUserTotp(user) {
+  if (!confirm(`Disable two-factor authentication for "${user.username}"?`)) return;
+  try {
+    await api.post(`/api/users/${user.id}/2fa/disable`);
+    await loadUsersTable();
+  } catch (err) {
+    alert(err.message);
   }
 }
 
