@@ -299,6 +299,12 @@ code {
   margin: 0;
 }
 
+.traffic-view {
+  height: 320px;
+  overflow-y: auto;
+  margin: 0;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

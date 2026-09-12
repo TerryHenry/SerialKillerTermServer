@@ -534,7 +534,8 @@
         <h4>System Control</h4>
         <ul>
           <li><strong>Uptime</strong> &mdash; how long the Pi has been running, live.</li>
-          <li><strong>Hostname</strong> &mdash; the name this Pi identifies itself as on the network (letters, digits, and hyphens only, up to 63 characters). Takes effect immediately; anything already connected by IP address is unaffected, but a connection relying on the old <code>&lt;hostname&gt;.local</code> address will need to use the new one afterward.</li>
+          <li><strong>Hostname</strong> &mdash; the name this Pi identifies itself as on the network (letters, digits, and hyphens only, up to 63 characters). Takes effect immediately; anything already connected by IP address is unaffected.</li>
+          <li><strong>Also update the mDNS (.local) name</strong> &mdash; off by default. Changing the hostname alone does <em>not</em> change what <code>&lt;name&gt;.local</code> resolves to &mdash; the existing <code>.local</code> address keeps working on purpose, so a rename doesn't silently break bookmarks, scripts, or other devices' saved connections. Check this box to also restart <code>avahi-daemon</code> so the mDNS name catches up to match the new hostname.</li>
           <li><strong>Reboot Now</strong> &mdash; restarts the Pi itself (not just the app). Drops every active SSH and web console session immediately; the page waits for it to come back and reloads itself automatically, the same way <a href="#tab-about">Apply Update</a> does.</li>
         </ul>
       </div>

@@ -1434,10 +1434,13 @@ document.getElementById('saveHostnameBtn').addEventListener('click', async () =>
   const msg = document.getElementById('systemControlMsg');
   msg.textContent = '';
   const hostname = document.getElementById('systemHostname').value.trim();
+  const updateMdns = document.getElementById('systemUpdateMdns').checked;
   try {
-    await api.post('/api/system/hostname', { hostname });
+    const result = await api.post('/api/system/hostname', { hostname, updateMdns });
     msg.style.color = 'var(--ok)';
-    msg.textContent = 'Hostname updated.';
+    msg.textContent = result.updateMdns
+      ? `Hostname updated. Now reachable at ${result.hostname}.local.`
+      : `Hostname updated. The mDNS name was left as-is.`;
   } catch (err) {
     msg.style.color = 'var(--danger)';
     msg.textContent = err.message;
