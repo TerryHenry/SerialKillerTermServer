@@ -406,6 +406,7 @@
     <ul>
       <li><a href="#tab-dashboard">Dashboard</a></li>
       <li><a href="#tab-server">Server</a></li>
+      <li><a href="#tab-system">System</a></li>
       <li><a href="#tab-network">Network</a></li>
       <li><a href="#tab-ports">Serial Ports</a></li>
       <li><a href="#tab-tftp">TFTP</a></li>
@@ -487,7 +488,7 @@
 
     <section id="tab-dashboard">
       <h2>Web Admin UI</h2>
-      <p class="lede">Ten tabs across the top of the admin UI. Here's what each one does.</p>
+      <p class="lede">Eleven tabs across the top of the admin UI. Here's what each one does.</p>
 
       <h3>Dashboard</h3>
       <div class="card">
@@ -524,6 +525,22 @@
       <div class="callout warn">
         <span class="mark">Handle with care</span>
         <p>A backup file contains password hashes and SSH public keys for every account on the appliance &mdash; and, if you opted in, an SSH private key. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back every admin's password too, to whatever it was when that backup was taken.</p>
+      </div>
+    </section>
+
+    <section id="tab-system">
+      <h3>System</h3>
+      <div class="card">
+        <h4>System Control</h4>
+        <ul>
+          <li><strong>Uptime</strong> &mdash; how long the Pi has been running, live.</li>
+          <li><strong>Hostname</strong> &mdash; the name this Pi identifies itself as on the network (letters, digits, and hyphens only, up to 63 characters). Takes effect immediately; anything already connected by IP address is unaffected, but a connection relying on the old <code>&lt;hostname&gt;.local</code> address will need to use the new one afterward.</li>
+          <li><strong>Reboot Now</strong> &mdash; restarts the Pi itself (not just the app). Drops every active SSH and web console session immediately; the page waits for it to come back and reloads itself automatically, the same way <a href="#tab-about">Apply Update</a> does.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>System Information</h4>
+        <p>A read-only snapshot for support and troubleshooting: OS release, kernel version, CPU model and core count, total memory, disk usage, the Node.js runtime version, and the running app version &mdash; everything you'd otherwise need a shell session on the Pi to look up.</p>
       </div>
     </section>
 
@@ -571,6 +588,7 @@
           <li><strong>Label</strong> &mdash; whatever the device actually is: "Core Switch Console," "Lab Router 3."</li>
           <li><strong>Device path, baud, data/stop bits, parity, RTS/CTS</strong> &mdash; standard serial parameters, matched to the equipment on the other end.</li>
           <li><strong>Access mode</strong> &mdash; who can connect at once, and who can type. Covered in full in <a href="#access-modes">Access modes &amp; permissions</a>.</li>
+          <li><strong>Capture sessions to file</strong> &mdash; off by default. When on, every session on that port (SSH or web console) is logged to a plain-text file, byte for byte, in the order it happened. See <a href="#tab-sessions">Session Captures</a>.</li>
         </ul>
         <p>Ports are referenced by ID internally, so renaming a label later doesn't break any user's assignment to it.</p>
       </div>
@@ -578,6 +596,12 @@
       <div class="callout warn">
         <span class="mark">Use stable paths</span>
         <p><code>/dev/ttyUSB0</code>-style names are assigned by detection order at boot or plug-in time &mdash; they aren't guaranteed to stay the same across a reboot or a replug, which can silently point a port at the wrong physical device. <strong>Refresh</strong> lists <code>/dev/serial/by-id/&hellip;</code> paths instead whenever they're available (derived from each device's own USB descriptor via udev, already set up on the Pi with no configuration needed) &mdash; always prefer those over a raw <code>ttyUSBx</code> path. If you have two identical adapters that don't expose a unique serial number, their <code>by-id</code> names may collide; in that case <code>/dev/serial/by-path/&hellip;</code> (stable by physical USB port instead of device identity) is the fallback, as long as you always plug that adapter into the same physical port.</p>
+      </div>
+
+      <div class="card">
+        <h4>RX / TX counters and live Debug</h4>
+        <p>Each row shows cumulative bytes received from the device and sent to it, since the app last started &mdash; a quick way to confirm a device is actually talking at all, or notice one that's gone silent.</p>
+        <p><strong>Debug</strong> opens a live, read-only hex-and-ASCII dump of everything crossing that port while a session is connected to it &mdash; useful for tracking down garbled output, a wrong baud rate, or a device that isn't responding the way you expect. It only taps traffic that's already flowing; it doesn't open the port itself, so it shows nothing if no session is currently connected.</p>
       </div>
     </section>
 
@@ -649,6 +673,16 @@
           <p>A live stream of connect/disconnect events and server activity, including the TFTP server. It persists &mdash; the last 2,000 lines are kept on disk, so reopening the tab or rebooting the Pi doesn't lose history the way an in-memory-only log would.</p>
           <p>Admin actions are tagged <code>[AUDIT]</code> right in this same stream &mdash; who logged in or out (including failed login attempts), changed a setting, added or deleted a port/user/admin account, restored a backup, and so on &mdash; so accountability lives alongside the rest of the activity instead of a separate place you'd have to remember to check.</p>
         </div>
+      </div>
+
+      <div class="card">
+        <h4>Session Captures</h4>
+        <p>A history of past sessions on any port with <strong>Capture sessions to file</strong> turned on (Serial Ports tab) &mdash; one plain-text file per session, timestamped, named for the port and username, listed here with size and last-modified time. Click a filename to download it; <strong>Delete</strong> removes it permanently, no undo.</p>
+      </div>
+
+      <div class="card">
+        <h4>External Syslog Server</h4>
+        <p>Mirrors every <code>[AUDIT]</code> entry to an external syslog server in real time, over UDP using the standard BSD (RFC&nbsp;3164) format that essentially every log collector understands out of the box. Off by default. Fill in the server's host and port (<code>514</code> is the usual default) and a facility, then <strong>Save Settings</strong>; <strong>Send Test Message</strong> confirms it's reaching the collector without waiting for a real event.</p>
       </div>
     </section>
 
@@ -824,6 +858,18 @@ tftp terminalserver.local
         <h4>Turn on two-factor authentication</h4>
         <p>Available for admin accounts (self-service, <a href="#tab-admin">My Account</a>) and console users (admin-managed, <a href="#tab-users">Users tab</a>) alike. Especially worth doing for anything reachable beyond your own LAN. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
       </div>
+      <div class="card">
+        <h4>Session captures can contain sensitive output</h4>
+        <p>A capture file is a byte-for-byte record of whatever crossed that serial port &mdash; which can include passwords typed at a device's own login prompt, configuration secrets, or anything else that appeared on screen. Only turn on <strong>Capture sessions to file</strong> for ports where that's acceptable, and treat the files under <a href="#tab-sessions">Session Captures</a> with the same care as the backup file.</p>
+      </div>
+      <div class="card">
+        <h4>Syslog forwarding is plain UDP</h4>
+        <p>Like traditional BSD syslog generally, messages sent to an external syslog server are neither encrypted nor authenticated in transit. Fine on a trusted LAN alongside your log collector; route it through a VPN or a trusted network segment if the two aren't on the same one.</p>
+      </div>
+      <div class="card">
+        <h4>Reboot and hostname changes are full-admin actions</h4>
+        <p>Any admin account can reboot the Pi or change its hostname from the <a href="#tab-system">System tab</a> &mdash; both immediately affect every user of the appliance, not just the admin who clicked. The same principle as everywhere else in this handbook applies: only grant admin accounts to people you'd trust with that.</p>
+      </div>
     </section>
 
     <section id="troubleshooting">
@@ -875,6 +921,14 @@ tftp terminalserver.local
             <tr>
               <td>Wi-Fi radio won't turn on, or Connect fails</td>
               <td>Confirm the Pi has Wi-Fi hardware and NetworkManager is managing it (<code>nmcli device status</code> over SSH on port 22). If the sudoers rule failed validation during setup (see <code>/opt/terminalserver/data/setup.log</code>), Wi-Fi control is unavailable until that's fixed.</td>
+            </tr>
+            <tr>
+              <td>SSH on port 22 prints a "unable to resolve host" warning after a hostname change</td>
+              <td>Harmless &mdash; <code>sudo</code> tries to resolve the new hostname and can't find a matching <code>/etc/hosts</code> entry. It doesn't affect the command that ran or anything in this appliance; it goes away once the Pi's own <code>/etc/hosts</code> is updated to match (or on the next reboot, for most default setups).</td>
+            </tr>
+            <tr>
+              <td>Traffic Debug shows nothing</td>
+              <td>It only taps traffic already flowing through a session someone else has connected &mdash; it doesn't open the port itself. Connect a session to that port first (SSH or web console), then open Debug.</td>
             </tr>
           </tbody>
         </table>

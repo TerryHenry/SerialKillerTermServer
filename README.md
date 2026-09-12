@@ -59,6 +59,21 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 - **Dashboard tab** — live CPU, memory, and disk usage, total connected
   clients, and a live status (present/missing) and client count for every
   configured serial port.
+- **System tab** — live uptime, a hostname field (change and it takes effect
+  immediately, no reboot needed), a Reboot Now button, and a read-only
+  system-information panel (OS release, kernel version, CPU model/cores,
+  total memory, disk usage, Node.js and app versions) for support and
+  troubleshooting without needing a separate shell session.
+- **Per-port traffic counters and live debug** — the Serial Ports tab shows
+  cumulative RX/TX byte counts per port since the app last started, plus a
+  Debug button that opens a live, read-only hex/ASCII dump of traffic
+  already crossing that port (it taps an active session; it doesn't open
+  the port itself).
+- **Session capture to file** — an optional per-port setting
+  (`captureEnabled`) that logs every session on that port, byte for byte in
+  the order it happened, to a plain-text file under
+  `/opt/terminalserver/data/captures`. Browse, download, or delete captures
+  from the Sessions tab.
 - **Network tab** — shows every network interface's status, IP address, and
   connection name (via NetworkManager), plus this Pi's public IP if it has
   internet access. Also enables/disables the Wi-Fi radio and joins a Wi-Fi
@@ -88,6 +103,11 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 - **Audit log** — admin actions (settings changes, port/user/admin
   create/delete, backup restores, TFTP file changes) are recorded, tagged
   with who did it, right alongside the rest of the server's activity log.
+  Optionally mirrored in real time to an **external syslog server** (UDP,
+  RFC 3164/BSD format), off by default, configurable from the Log tab.
+- **Last login tracking** — the Users and Admin Accounts tables show each
+  account's most recent successful login (SSH, web console, or admin UI, as
+  applicable), or "Never" if it hasn't been used yet.
 - **Backup &amp; restore** — export the full config (ports, users, admin
   accounts, settings) as a single file and restore it later, optionally
   including the SSH host key so a restore reproduces the same host-key
@@ -209,7 +229,11 @@ Updates** (so admins know a newer version exists), just without an
   app shells out to — a narrow bounding set breaks sudo's own root
   transition outright (`sudo: unable to change to root gid: Operation not
   permitted`). The actual privilege boundary is the sudoers rule, not the
-  capability set.
+  capability set. The same helper script (and thus the same sudoers rule,
+  unchanged) also handles the System tab's reboot and hostname-change
+  actions — the sudoers grant covers the whole script file, not individual
+  subcommands, so extending it never requires touching `setup.sh` or
+  re-provisioning an already-deployed Pi.
 - The in-place updater keeps this same narrow-privilege model: everything
   through staging, syntax-checking, `npm install`, and backup runs
   unprivileged as the `terminalserver` account (which already owns
@@ -228,6 +252,14 @@ Updates** (so admins know a newer version exists), just without an
   Same recovery path as a lost admin password: edit
   `/opt/terminalserver/data/config.json` over SSH on port 22 (clear that
   admin's `totpEnabled`/`totpSecret`) and restart the service.
+- Session capture files (`/opt/terminalserver/data/captures`) accumulate
+  indefinitely with no automatic rotation or cleanup — delete old ones from
+  the Sessions tab (or the filesystem directly) if a port with capture
+  enabled sees heavy, ongoing use on a space-constrained SD card. They're
+  also not included in backup/restore, the same as TFTP files.
+- Syslog forwarding is plain UDP (standard for BSD/RFC 3164 syslog) —
+  unencrypted and unauthenticated in transit. Fine on a trusted LAN
+  alongside the collector; route it through a VPN otherwise.
 - `npm audit` is clean except one moderate `qs`/`express` advisory that
   can't be resolved without a major Express 4→5 upgrade — a bigger, separate
   effort given how much routing/middleware behavior a major version bump

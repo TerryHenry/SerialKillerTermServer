@@ -81,6 +81,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="server">Server</button>
+      <button class="tab-btn" data-tab="system">System</button>
       <button class="tab-btn" data-tab="network">Network</button>
       <button class="tab-btn" data-tab="ports">Serial Ports</button>
       <button class="tab-btn" data-tab="tftp">TFTP</button>
@@ -187,6 +188,43 @@
           <button id="restoreBtn" class="danger">Restore from Backup&hellip;</button>
         </div>
         <div class="auth-error" id="restoreMsg"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-system">
+      <div class="panel">
+        <h2>System Control</h2>
+        <div class="field-row">
+          <label>Uptime</label>
+          <span id="systemUptime">&mdash;</span>
+        </div>
+        <div class="field-row">
+          <label for="systemHostname">Hostname</label>
+          <input type="text" id="systemHostname" autocomplete="off" />
+          <button id="saveHostnameBtn">Save</button>
+        </div>
+        <div class="field-row">
+          <button id="rebootBtn" class="danger">Reboot Now</button>
+        </div>
+        <p class="hint">Rebooting drops all active SSH and web console sessions immediately and takes roughly a minute to come back.</p>
+        <div class="auth-error" id="systemControlMsg"></div>
+      </div>
+
+      <div class="panel">
+        <h2>System Information</h2>
+        <table class="data-table" id="systemInfoTable">
+          <tbody>
+            <tr><th>Operating System</th><td id="infoOsRelease">&mdash;</td></tr>
+            <tr><th>Kernel</th><td id="infoKernel">&mdash;</td></tr>
+            <tr><th>Architecture</th><td id="infoArch">&mdash;</td></tr>
+            <tr><th>CPU</th><td id="infoCpu">&mdash;</td></tr>
+            <tr><th>Total Memory</th><td id="infoMemory">&mdash;</td></tr>
+            <tr><th>Disk</th><td id="infoDisk">&mdash;</td></tr>
+            <tr><th>Node.js</th><td id="infoNode">&mdash;</td></tr>
+            <tr><th>App Version</th><td id="infoAppVersion">&mdash;</td></tr>
+          </tbody>
+        </table>
+        <button id="refreshSystemInfoBtn">Refresh</button>
       </div>
     </div>
 
@@ -301,7 +339,7 @@
       <div class="panel">
         <h2>Configured Serial Ports</h2>
         <table class="data-table" id="portsTable">
-          <thead><tr><th>Label</th><th>Device</th><th>Baud</th><th>Data/Stop/Parity</th><th>Access</th><th></th></tr></thead>
+          <thead><tr><th>Label</th><th>Device</th><th>Baud</th><th>Data/Stop/Parity</th><th>Access</th><th>Capture</th><th>RX / TX</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <button id="addPortBtn">+ Add Port</button>
@@ -359,7 +397,7 @@
         <h2>Users</h2>
         <p class="hint">These accounts can connect over SSH, and over the web too if the Web Console is enabled on the Server tab.</p>
         <table class="data-table" id="usersTable">
-          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th>2FA</th><th></th></tr></thead>
+          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th>2FA</th><th>Last Login</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="field-row">
@@ -381,12 +419,56 @@
           <tbody></tbody>
         </table>
       </div>
+
+      <div class="panel">
+        <h2>Session Captures</h2>
+        <p class="hint">Text logs of past sessions on ports with capture enabled (Serial Ports tab).</p>
+        <table class="data-table" id="capturesTable">
+          <thead><tr><th>File</th><th>Size</th><th>Modified</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" id="capturesEmpty">No captures yet.</p>
+        <button id="refreshCapturesBtn">Refresh</button>
+      </div>
     </div>
 
     <div class="tab-content" id="tab-log">
       <div class="panel">
         <h2>Server Log</h2>
         <pre class="code-block log-view" id="logView"></pre>
+      </div>
+
+      <div class="panel">
+        <h2>External Syslog Server</h2>
+        <p class="hint">Mirrors audit log entries to an external syslog server (UDP, RFC 3164) as they happen.</p>
+        <div class="field-row">
+          <label for="syslogEnabled">Enabled</label>
+          <input type="checkbox" id="syslogEnabled" />
+        </div>
+        <div class="field-row">
+          <label for="syslogHost">Server host</label>
+          <input type="text" id="syslogHost" placeholder="syslog.example.com" autocomplete="off" />
+          <label for="syslogPort">Port</label>
+          <input type="number" id="syslogPort" min="1" max="65535" style="width: 6em" />
+        </div>
+        <div class="field-row">
+          <label for="syslogFacility">Facility</label>
+          <select id="syslogFacility">
+            <option value="16">local0</option>
+            <option value="17">local1</option>
+            <option value="18">local2</option>
+            <option value="19">local3</option>
+            <option value="20">local4</option>
+            <option value="21">local5</option>
+            <option value="22">local6</option>
+            <option value="23">local7</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <button id="saveSyslogBtn">Save Settings</button>
+          <button id="testSyslogBtn" class="secondary">Send Test Message</button>
+        </div>
+        <div class="auth-error" id="syslogMsg"></div>
       </div>
     </div>
 
@@ -472,7 +554,7 @@
       <div class="panel">
         <h2>Admin Accounts</h2>
         <table class="data-table" id="adminsTable">
-          <thead><tr><th>Username</th><th>Status</th><th>2FA</th><th></th></tr></thead>
+          <thead><tr><th>Username</th><th>Status</th><th>2FA</th><th>Last Login</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <button id="addAdminBtn">+ Add Admin</button>
@@ -546,10 +628,28 @@
           <option value="shared-ro">Shared — read-only (multiple users, view only)</option>
         </select>
       </div>
+      <div class="field-row">
+        <label for="portCapture">Capture sessions to file</label>
+        <input type="checkbox" id="portCapture" />
+        <span class="hint">Saves a plain-text log of every session on this port under the data directory. See the Sessions tab to browse, download, or delete captures.</span>
+      </div>
       <input type="hidden" id="portId" />
       <div class="modal-actions">
         <button id="cancelPortBtn" class="secondary">Cancel</button>
         <button id="savePortBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live traffic debug modal -->
+  <div class="modal-backdrop" id="trafficModalBackdrop">
+    <div class="modal modal-wide">
+      <h3 id="trafficModalTitle">Traffic Debug</h3>
+      <p class="hint">Shows raw bytes as they cross this port while a session is connected. Nothing to see here if no one is currently connected.</p>
+      <pre class="code-block log-view" id="trafficView"></pre>
+      <div class="modal-actions">
+        <button id="clearTrafficBtn" class="secondary">Clear</button>
+        <button id="closeTrafficBtn" class="primary">Close</button>
       </div>
     </div>
   </div>

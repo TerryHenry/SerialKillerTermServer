@@ -106,8 +106,24 @@ case "${1:-}" in
     [ -n "$password" ] || { echo "password required" >&2; exit 1; }
     printf 'admin:%s\n' "$password" | chpasswd
     ;;
+  reboot)
+    # Takes no arguments, same reasoning as service-restart -- the app can only ever
+    # reboot the one host it's running on.
+    exec systemctl reboot
+    ;;
+  hostname-set)
+    hostname="${2:?hostname required}"
+    case "$hostname" in
+      ''|*[!a-zA-Z0-9-]*|-*|*-) echo "invalid hostname: $hostname" >&2; exit 1 ;;
+    esac
+    if [ "${#hostname}" -gt 63 ]; then
+      echo "hostname too long: $hostname" >&2
+      exit 1
+    fi
+    exec hostnamectl set-hostname "$hostname"
+    ;;
   *)
-    echo "usage: system-helper.sh {enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set}" >&2
+    echo "usage: system-helper.sh {enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
     exit 1
     ;;
 esac

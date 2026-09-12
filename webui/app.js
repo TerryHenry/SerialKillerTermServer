@@ -801,6 +801,7 @@ async function loadAdminsTable() {
       <td>${escapeHtml(a.username)}${a.isSelf ? ' <span class="hint">(you)</span>' : ''}</td>
       <td>${statusPill}</td>
       <td>${totpPill}</td>
+      <td>${formatLastLogin(a.lastLoginAt)}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
@@ -932,20 +933,38 @@ async function loadPortsTable() {
   ports.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
   const tbody = document.querySelector('#portsTable tbody');
   tbody.innerHTML = '';
+  let statsById = {};
+  try {
+    statsById = Object.fromEntries((await api.get('/api/stats')).ports.map((p) => [p.id, p]));
+  } catch {
+    // stats are a nice-to-have here; an empty table just shows no counters
+  }
   for (const p of ports) {
     const tr = document.createElement('tr');
+    const stats = statsById[p.id];
+    const trafficText = stats ? `${formatBytes(stats.rxBytes)} / ${formatBytes(stats.txBytes)}` : '&mdash;';
+    const capturePill = p.captureEnabled
+      ? '<span class="pill ok"><span class="dot"></span>On</span>'
+      : '<span class="pill mute"><span class="dot"></span>Off</span>';
     tr.innerHTML = `
       <td>${escapeHtml(p.label)}</td>
       <td>${escapeHtml(p.path)}</td>
       <td>${p.baudRate}</td>
       <td>${p.dataBits}/${p.stopBits}/${p.parity}</td>
       <td>${accessPill(p.access)}</td>
+      <td>${capturePill}</td>
+      <td>${trafficText}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
     const editBtn = document.createElement('button');
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', () => openPortModal(p));
+    const debugBtn = document.createElement('button');
+    debugBtn.textContent = 'Debug';
+    debugBtn.className = 'secondary';
+    debugBtn.style.marginLeft = '6px';
+    debugBtn.addEventListener('click', () => openTrafficModal(p));
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Delete';
     delBtn.className = 'danger';
@@ -958,6 +977,7 @@ async function loadPortsTable() {
       }
     });
     actionsCell.appendChild(editBtn);
+    actionsCell.appendChild(debugBtn);
     actionsCell.appendChild(delBtn);
     tbody.appendChild(tr);
   }
@@ -973,6 +993,10 @@ function accessLabel(access) {
 function accessPill(access) {
   const cls = access && access !== 'exclusive' ? 'accent' : 'mute';
   return `<span class="pill ${cls}"><span class="dot"></span>${accessLabel(access)}</span>`;
+}
+
+function formatLastLogin(iso) {
+  return iso ? new Date(iso).toLocaleString() : '<span class="hint">Never</span>';
 }
 
 function permissionPill(permission) {
@@ -1015,6 +1039,7 @@ function openPortModal(port) {
   document.getElementById('portParity').value = port?.parity || 'none';
   document.getElementById('portRtscts').checked = !!port?.rtscts;
   document.getElementById('portAccess').value = port?.access || 'exclusive';
+  document.getElementById('portCapture').checked = !!port?.captureEnabled;
   editingPortPath = port?.path || null;
   clearFieldError('portLabel');
   clearFieldError('portPath');
@@ -1055,13 +1080,48 @@ document.getElementById('savePortBtn').addEventListener('click', async () => {
     stopBits: Number(document.getElementById('portStopBits').value),
     parity: document.getElementById('portParity').value,
     rtscts: document.getElementById('portRtscts').checked,
-    access: document.getElementById('portAccess').value
+    access: document.getElementById('portAccess').value,
+    captureEnabled: document.getElementById('portCapture').checked
   };
   await api.post('/api/ports', port);
   closePortModal();
   await loadPortsTable();
   await refreshUserDefaultPortOptions();
 });
+
+// ---------- Live traffic debug ----------
+let trafficSocket = null;
+
+function closeTrafficModal() {
+  document.getElementById('trafficModalBackdrop').classList.remove('open');
+  if (trafficSocket) {
+    trafficSocket.close();
+    trafficSocket = null;
+  }
+}
+
+function openTrafficModal(port) {
+  document.getElementById('trafficModalTitle').textContent = `Traffic Debug — ${port.label}`;
+  const view = document.getElementById('trafficView');
+  view.textContent = '';
+  document.getElementById('trafficModalBackdrop').classList.add('open');
+
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  trafficSocket = new WebSocket(`${proto}//${window.location.host}/ws/traffic?portId=${encodeURIComponent(port.id)}`);
+  trafficSocket.addEventListener('message', (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type !== 'traffic') return;
+    const time = new Date(msg.ts).toLocaleTimeString();
+    const dir = msg.direction === 'rx' ? 'RX' : 'TX';
+    view.textContent += `[${time}] ${dir}  ${(msg.hex.match(/.{1,2}/g) || []).join(' ')}   ${msg.ascii}\n`;
+    view.scrollTop = view.scrollHeight;
+  });
+}
+
+document.getElementById('clearTrafficBtn').addEventListener('click', () => {
+  document.getElementById('trafficView').textContent = '';
+});
+document.getElementById('closeTrafficBtn').addEventListener('click', closeTrafficModal);
 
 // ---------- Web Console (HTTPS-to-Serial) ----------
 let webTerminalEnabled = false;
@@ -1105,6 +1165,7 @@ async function loadUsersTable() {
       <td>${permissionPill(u.permission)}</td>
       <td>${u.defaultPortId ? escapeHtml(portById[u.defaultPortId] || '(deleted port)') : '<span class="hint">port menu</span>'}</td>
       <td>${totpPill}</td>
+      <td>${formatLastLogin(u.lastLoginAt)}</td>
       <td></td>
     `;
     const actionsCell = tr.lastElementChild;
@@ -1339,6 +1400,154 @@ function renderSessions(sessions) {
 }
 
 // ---------- Dashboard ----------
+function formatUptime(seconds) {
+  seconds = Math.floor(seconds || 0);
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (days) parts.push(`${days}d`);
+  if (days || hours) parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+  return parts.join(' ');
+}
+
+// ---------- System ----------
+async function loadSystemInfo() {
+  const info = await api.get('/api/system/info');
+  document.getElementById('systemHostname').value = info.hostname;
+  document.getElementById('infoOsRelease').textContent = info.osRelease || 'Unknown';
+  document.getElementById('infoKernel').textContent = info.kernel;
+  document.getElementById('infoArch').textContent = info.arch;
+  document.getElementById('infoCpu').textContent = `${info.cpuModel} (${info.cpuCores} core${info.cpuCores === 1 ? '' : 's'})`;
+  document.getElementById('infoMemory').textContent = formatBytes(info.totalMemory);
+  document.getElementById('infoDisk').textContent = info.disk
+    ? `${formatBytes(info.disk.used)} / ${formatBytes(info.disk.total)} used (${info.disk.mount})`
+    : 'Unknown';
+  document.getElementById('infoNode').textContent = info.nodeVersion;
+  document.getElementById('infoAppVersion').textContent = info.appVersion;
+}
+
+document.getElementById('refreshSystemInfoBtn').addEventListener('click', () => loadSystemInfo().catch((err) => alert(err.message)));
+
+document.getElementById('saveHostnameBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('systemControlMsg');
+  msg.textContent = '';
+  const hostname = document.getElementById('systemHostname').value.trim();
+  try {
+    await api.post('/api/system/hostname', { hostname });
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Hostname updated.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('rebootBtn').addEventListener('click', async () => {
+  if (!confirm('Reboot the Pi now? All active SSH and web console sessions will be dropped immediately.')) return;
+  const msg = document.getElementById('systemControlMsg');
+  msg.style.color = 'var(--text-dim)';
+  msg.textContent = 'Rebooting…';
+  try {
+    await api.post('/api/system/reboot');
+    const backUp = await pollUntilBackUp(() => {
+      msg.textContent = 'Waiting for the Pi to come back...';
+    });
+    if (backUp) {
+      msg.style.color = 'var(--ok)';
+      msg.textContent = 'Back up. Reloading…';
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      msg.style.color = 'var(--danger)';
+      msg.textContent = 'Did not come back within 3 minutes — check on it directly.';
+    }
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+// ---------- Session captures ----------
+async function loadCapturesTable() {
+  const captures = await api.get('/api/captures');
+  const tbody = document.querySelector('#capturesTable tbody');
+  const empty = document.getElementById('capturesEmpty');
+  tbody.innerHTML = '';
+  empty.style.display = captures.length ? 'none' : 'block';
+  for (const c of captures) {
+    const tr = document.createElement('tr');
+    const nameCell = document.createElement('td');
+    const link = document.createElement('a');
+    link.href = `/api/captures/${encodeURIComponent(c.name)}`;
+    link.textContent = c.name;
+    nameCell.appendChild(link);
+    tr.appendChild(nameCell);
+    const sizeCell = document.createElement('td');
+    sizeCell.textContent = formatBytes(c.size);
+    tr.appendChild(sizeCell);
+    const modCell = document.createElement('td');
+    modCell.textContent = new Date(c.modifiedAt).toLocaleString();
+    tr.appendChild(modCell);
+    const actionsCell = document.createElement('td');
+    tr.appendChild(actionsCell);
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Delete';
+    delBtn.className = 'danger';
+    delBtn.style.marginLeft = '6px';
+    delBtn.addEventListener('click', async () => {
+      if (confirm(`Delete capture "${c.name}"?`)) {
+        await api.del(`/api/captures/${encodeURIComponent(c.name)}`);
+        await loadCapturesTable();
+      }
+    });
+    actionsCell.appendChild(delBtn);
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById('refreshCapturesBtn').addEventListener('click', () => loadCapturesTable());
+
+// ---------- External syslog server ----------
+async function loadSyslogSettings() {
+  const syslog = await api.get('/api/syslog');
+  document.getElementById('syslogEnabled').checked = syslog.enabled;
+  document.getElementById('syslogHost').value = syslog.host;
+  document.getElementById('syslogPort').value = syslog.port;
+  document.getElementById('syslogFacility').value = String(syslog.facility);
+}
+
+document.getElementById('saveSyslogBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('syslogMsg');
+  msg.textContent = '';
+  try {
+    await api.post('/api/syslog', {
+      enabled: document.getElementById('syslogEnabled').checked,
+      host: document.getElementById('syslogHost').value.trim(),
+      port: Number(document.getElementById('syslogPort').value) || 514,
+      facility: Number(document.getElementById('syslogFacility').value)
+    });
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Saved.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('testSyslogBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('syslogMsg');
+  msg.textContent = '';
+  try {
+    await api.post('/api/syslog/test');
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Test message sent.';
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
 function setBar(fillEl, percent) {
   const pct = Math.max(0, Math.min(100, percent || 0));
   fillEl.style.width = `${pct}%`;
@@ -1363,6 +1572,7 @@ function renderStats(stats) {
   }
 
   document.getElementById('statClients').textContent = stats.clientsConnected;
+  document.getElementById('systemUptime').textContent = formatUptime(stats.uptimeSec);
 
   const tbody = document.querySelector('#portStatusTable tbody');
   const empty = document.getElementById('portStatusEmpty');
@@ -1547,6 +1757,9 @@ async function initApp() {
   await loadTotpStatus();
   await loadVersion();
   await loadUpdateStatus();
+  await loadSystemInfo();
+  await loadCapturesTable();
+  await loadSyslogSettings();
   renderSessions(await api.get('/api/sessions'));
   renderStats(await api.get('/api/stats'));
   await loadLogHistory();

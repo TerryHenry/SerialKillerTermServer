@@ -345,6 +345,7 @@ code {
 }
 
 .modal h3 { margin-top: 0; }
+.modal-wide { width: 640px; }
 
 .modal-actions {
   display: flex;
