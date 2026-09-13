@@ -204,6 +204,11 @@
           <button id="saveHostnameBtn">Save</button>
         </div>
         <div class="field-row">
+          <label for="systemUpdateMdns">Also update the mDNS (.local) name</label>
+          <input type="checkbox" id="systemUpdateMdns" />
+          <span class="hint">Off by default, so existing bookmarks/scripts pointing at the current <code>.local</code> address keep working even after renaming the host. Check this to make the <code>.local</code> address match the new hostname too.</span>
+        </div>
+        <div class="field-row">
           <button id="rebootBtn" class="danger">Reboot Now</button>
         </div>
         <p class="hint">Rebooting drops all active SSH and web console sessions immediately and takes roughly a minute to come back.</p>
@@ -646,7 +651,7 @@
     <div class="modal modal-wide">
       <h3 id="trafficModalTitle">Traffic Debug</h3>
       <p class="hint">Shows raw bytes as they cross this port while a session is connected. Nothing to see here if no one is currently connected.</p>
-      <pre class="code-block log-view" id="trafficView"></pre>
+      <pre class="code-block traffic-view" id="trafficView"></pre>
       <div class="modal-actions">
         <button id="clearTrafficBtn" class="secondary">Clear</button>
         <button id="closeTrafficBtn" class="primary">Close</button>

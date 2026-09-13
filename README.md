@@ -63,7 +63,11 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   immediately, no reboot needed), a Reboot Now button, and a read-only
   system-information panel (OS release, kernel version, CPU model/cores,
   total memory, disk usage, Node.js and app versions) for support and
-  troubleshooting without needing a separate shell session.
+  troubleshooting without needing a separate shell session. Changing the
+  hostname leaves the existing `<name>.local` mDNS address alone unless you
+  also check **Also update the mDNS (.local) name**, which restarts
+  `avahi-daemon` so it catches up to match — opt-in, so a rename can't
+  silently break something else that's bookmarked the old `.local` address.
 - **Per-port traffic counters and live debug** — the Serial Ports tab shows
   cumulative RX/TX byte counts per port since the app last started, plus a
   Debug button that opens a live, read-only hex/ASCII dump of traffic

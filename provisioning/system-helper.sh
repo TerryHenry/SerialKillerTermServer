@@ -113,6 +113,7 @@ case "${1:-}" in
     ;;
   hostname-set)
     hostname="${2:?hostname required}"
+    update_mdns="${3:-0}"
     case "$hostname" in
       ''|*[!a-zA-Z0-9-]*|-*|*-) echo "invalid hostname: $hostname" >&2; exit 1 ;;
     esac
@@ -120,7 +121,15 @@ case "${1:-}" in
       echo "hostname too long: $hostname" >&2
       exit 1
     fi
-    exec hostnamectl set-hostname "$hostname"
+    hostnamectl set-hostname "$hostname"
+    # Opt-in: avahi-daemon doesn't necessarily re-advertise under the new name on its
+    # own, so the "<oldname>.local" mDNS address can keep working (or stop working)
+    # independently of the Linux hostname change above until it's restarted. Only do
+    # this when asked -- an admin may be relying on the existing .local name staying
+    # put for bookmarks or scripts even after renaming the underlying host.
+    if [ "$update_mdns" = "1" ] && systemctl list-unit-files avahi-daemon.service >/dev/null 2>&1; then
+      systemctl restart avahi-daemon || true
+    fi
     ;;
   *)
     echo "usage: system-helper.sh {enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
