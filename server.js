@@ -8,6 +8,7 @@ const { ensureTlsCert } = require('./lib/tlsCert');
 const logStore = require('./lib/logStore');
 const sshServer = require('./lib/sshServer');
 const tftpServer = require('./lib/tftpServer');
+const tunnelClient = require('./lib/tunnelClient');
 const { createWebServer } = require('./lib/webServer');
 
 logStore.init(configStore.DATA_DIR);
@@ -34,16 +35,23 @@ if (configStore.getConfig().tftp.autoStart) {
   tftpServer.start(tftp.port, configStore.TFTP_ROOT_DIR, tftp.allowUpload);
 }
 
+if (configStore.getConfig().fleet.mode === 'managed') {
+  tunnelClient.start();
+}
+
 sshServer.on('log', (line) => console.log(line));
 tftpServer.on('log', (line) => console.log(line));
+tunnelClient.on('log', (line) => console.log(line));
 
 process.on('SIGTERM', () => {
   sshServer.stop();
   tftpServer.stop();
+  tunnelClient.stop();
   process.exit(0);
 });
 process.on('SIGINT', () => {
   sshServer.stop();
   tftpServer.stop();
+  tunnelClient.stop();
   process.exit(0);
 });

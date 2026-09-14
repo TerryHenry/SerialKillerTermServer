@@ -213,6 +213,37 @@
       </div>
 
       <div class="panel">
+        <h2>Central Office (Fleet)</h2>
+        <p class="hint">Tunnels this box out to a Central Office hub so it can be reached and managed alongside other sites from one place. Off by default &mdash; standalone mode (everything on this page above) works exactly as it always has either way.</p>
+        <div class="field-row">
+          <label for="fleetMode">Mode</label>
+          <select id="fleetMode">
+            <option value="standalone">Standalone (this box only)</option>
+            <option value="managed">Managed (tunnel to a hub)</option>
+          </select>
+          <span class="status-pill" id="fleetStatusPill">
+            <span class="dot"></span>
+            <span id="fleetStatusText">Disabled</span>
+          </span>
+        </div>
+        <div class="field-row">
+          <label for="fleetHubHost">Hub host</label>
+          <input type="text" id="fleetHubHost" placeholder="central-office.example.com" autocomplete="off" />
+          <label for="fleetHubPort">Port</label>
+          <input type="number" id="fleetHubPort" min="1" max="65535" style="width: 6em" />
+        </div>
+        <div class="field-row">
+          <button id="saveFleetBtn" class="primary">Save</button>
+        </div>
+        <div class="field-row column">
+          <label>This box's tunnel public key</label>
+          <pre class="code-block" id="fleetPublicKey">loading...</pre>
+          <span class="hint">Paste this into the hub's Sites page when enrolling this box &mdash; that's the entire trust relationship, so copy it exactly.</span>
+        </div>
+        <div class="auth-error" id="fleetMsg"></div>
+      </div>
+
+      <div class="panel">
         <h2>Backup</h2>
         <p class="hint">Covers SSH/TFTP/web settings, serial ports, users, and admin accounts (including password hashes and public keys). Store downloaded backups somewhere secure; they contain credential data.</p>
         <div class="field-row">
@@ -777,6 +808,7 @@
       <div class="field-row column" id="userPasswordRow">
         <label for="userPassword">Password <span class="hint">(leave blank to keep existing)</span></label>
         <input type="password" id="userPassword" />
+        <span class="hint" id="userPasswordPolicyHint"></span>
         <label for="userPasswordConfirm">Confirm password</label>
         <input type="password" id="userPasswordConfirm" />
         <span class="field-error" id="userPasswordError"></span>
@@ -842,6 +874,7 @@
       <div class="field-row column">
         <label for="adminPassword">Password <span class="hint" id="adminPasswordHint">(leave blank to keep existing)</span></label>
         <input type="password" id="adminPassword" minlength="8" />
+        <span class="hint" id="adminPasswordPolicyHint"></span>
         <label for="adminPasswordConfirm">Confirm password</label>
         <input type="password" id="adminPasswordConfirm" minlength="8" />
         <span class="field-error" id="adminPasswordError"></span>
