@@ -1358,6 +1358,16 @@ async function loadFleetSettings() {
   setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
 }
 
+/** Applied after Save/Enroll when the "disable local console" box is checked and the
+ * resulting mode is managed -- reuses the existing SSH-stop and web-console-disable
+ * endpoints rather than duplicating that logic, so it behaves exactly like turning both
+ * off by hand from their own tabs. */
+async function applyLocalConsoleLockdown(mode) {
+  if (mode !== 'managed' || !document.getElementById('fleetDisableLocalConsole').checked) return;
+  await api.post('/api/server/stop');
+  await api.post('/api/webterminal-settings', { enabled: false });
+}
+
 document.getElementById('saveFleetBtn').addEventListener('click', async () => {
   const msg = document.getElementById('fleetMsg');
   msg.style.color = 'var(--danger)';
@@ -1370,6 +1380,7 @@ document.getElementById('saveFleetBtn').addEventListener('click', async () => {
       hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
       hubHostKeyFingerprint: document.getElementById('fleetHostKeyFingerprint').value.trim()
     });
+    await applyLocalConsoleLockdown(fleet.mode);
     setFleetStatus(fleet.connected, fleet.mode);
     setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
     msg.style.color = 'var(--ok)';
@@ -1395,6 +1406,7 @@ document.getElementById('enrollFleetBtn').addEventListener('click', async () => 
       hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
       token
     });
+    await applyLocalConsoleLockdown(fleet.mode);
     document.getElementById('fleetMode').value = fleet.mode;
     setFleetStatus(fleet.connected, fleet.mode);
     setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
