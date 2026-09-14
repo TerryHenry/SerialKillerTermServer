@@ -722,6 +722,16 @@
         </ul>
       </div>
       <div class="card">
+        <h4>Password Policy</h4>
+        <p>One policy, enforced everywhere a password gets set on this appliance &mdash; admin accounts, the Pi System Account, and console users on the Users tab. Defaults to a 12-character minimum with a check against a bundled list of commonly breached passwords (checked entirely locally; nothing is ever sent anywhere), rather than mandatory character-class rules &mdash; current password-security guidance favors length over required-symbol-style complexity. All of it is adjustable:</p>
+        <ul>
+          <li><strong>Minimum length</strong> &mdash; 8 to 64 characters.</li>
+          <li><strong>Require upper &amp; lowercase letters / a digit / a symbol</strong> &mdash; each off by default, independently togglable, for appliances under a policy that specifically requires them.</li>
+          <li><strong>Reject common/breached passwords</strong> &mdash; on by default.</li>
+        </ul>
+        <p>Every password field on the appliance shows the current requirements right in its hint text, so nobody has to guess or trial-and-error their way to a valid one.</p>
+      </div>
+      <div class="card">
         <h4>TLS Certificate</h4>
         <p>Covers the web admin UI's own HTTPS certificate (port 8443). A self-signed one is generated automatically on first boot &mdash; this panel shows its type, subject, issuer, validity window, and SHA-256 fingerprint, and lets you replace it.</p>
         <ul>
@@ -874,6 +884,10 @@ tftp terminalserver.local
       <div class="card">
         <h4>Turn on two-factor authentication</h4>
         <p>Available for admin accounts (self-service, <a href="#tab-admin">My Account</a>) and console users (admin-managed, <a href="#tab-users">Users tab</a>) alike. Especially worth doing for anything reachable beyond your own LAN. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
+      </div>
+      <div class="card">
+        <h4>The password policy is a floor, not a ceiling</h4>
+        <p>The default (12 characters, checked against commonly breached passwords) is a reasonable baseline for most setups. Raise the minimum length or turn on the character-class requirements from <a href="#tab-admin">Admin Account &rarr; Password Policy</a> if your organization's own policy calls for more &mdash; it applies retroactively only to the <em>next</em> password change on each account, not to passwords already set.</p>
       </div>
       <div class="card">
         <h4>Session captures can contain sensitive output</h4>

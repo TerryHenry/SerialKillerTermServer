@@ -52,8 +52,57 @@ const forceChangeScreen = document.getElementById('forceChangeScreen');
 const totpScreen = document.getElementById('totpScreen');
 const appRoot = document.getElementById('appRoot');
 
+// ---------- Password policy ----------
+// Fetched once at boot (public, no auth needed) so hint text is accurate on every
+// password field, including the pre-auth setup/forced-change screens.
+async function loadPasswordPolicy() {
+  try {
+    const policy = await api.get('/api/password-policy');
+    const hintText = `(${policy.description})`;
+    for (const id of ['setupPasswordHint', 'forceChangePasswordHint', 'newAdminPasswordHint', 'osPasswordHint']) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = hintText;
+    }
+    for (const id of [
+      'setupPassword', 'forceChangePassword', 'forceChangePasswordConfirm',
+      'newAdminPassword', 'newAdminPasswordConfirm', 'osPassword', 'osPasswordConfirm'
+    ]) {
+      const el = document.getElementById(id);
+      if (el) el.minLength = policy.minLength;
+    }
+    document.getElementById('policyMinLength').value = policy.minLength;
+    document.getElementById('policyRequireMixedCase').checked = policy.requireMixedCase;
+    document.getElementById('policyRequireDigit').checked = policy.requireDigit;
+    document.getElementById('policyRequireSymbol').checked = policy.requireSymbol;
+    document.getElementById('policyCheckBreached').checked = policy.checkBreached;
+  } catch {
+    // non-fatal -- hints just stay at their static fallback text
+  }
+}
+
+document.getElementById('savePasswordPolicyBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('passwordPolicyMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = '';
+  try {
+    await api.post('/api/password-policy', {
+      minLength: Number(document.getElementById('policyMinLength').value),
+      requireMixedCase: document.getElementById('policyRequireMixedCase').checked,
+      requireDigit: document.getElementById('policyRequireDigit').checked,
+      requireSymbol: document.getElementById('policyRequireSymbol').checked,
+      checkBreached: document.getElementById('policyCheckBreached').checked
+    });
+    await loadPasswordPolicy();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Saved.';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
 // ---------- Auth bootstrap ----------
 async function boot() {
+  await loadPasswordPolicy();
   const session = await api.get('/api/session');
   if (session.needsSetup) {
     show(setupScreen);

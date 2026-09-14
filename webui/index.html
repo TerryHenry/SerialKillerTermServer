@@ -16,7 +16,7 @@
       <p class="hint">Create the administrator account used to manage this console server.</p>
       <label>Admin username</label>
       <input type="text" id="setupUsername" value="admin" required />
-      <label>Admin password <span class="hint">(min 8 characters)</span></label>
+      <label>Admin password <span class="hint" id="setupPasswordHint">(min 8 characters)</span></label>
       <input type="password" id="setupPassword" minlength="8" required />
       <div class="auth-error" id="setupError"></div>
       <button type="submit" class="primary">Create Admin Account</button>
@@ -43,7 +43,7 @@
       <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
       <h1>Change the default password</h1>
       <p class="hint">This account is still using the default password. Choose a new one to continue.</p>
-      <label>New password <span class="hint">(min 8 characters)</span></label>
+      <label>New password <span class="hint" id="forceChangePasswordHint">(min 8 characters)</span></label>
       <input type="password" id="forceChangePassword" minlength="8" required />
       <label>Confirm password</label>
       <input type="password" id="forceChangePasswordConfirm" minlength="8" required />
@@ -519,7 +519,7 @@
         <h2>My Account</h2>
         <p class="hint">Signed in as <strong id="myUsername">&mdash;</strong>.</p>
         <div class="field-row column">
-          <label for="newAdminPassword">New password</label>
+          <label for="newAdminPassword">New password <span class="hint" id="newAdminPasswordHint"></span></label>
           <input type="password" id="newAdminPassword" minlength="8" />
         </div>
         <div class="field-row column">
@@ -536,7 +536,7 @@
         <h2>Pi System Account</h2>
         <p class="hint">The Linux <code>admin</code> account used for SSH on port 22 (normal shell access to the Pi itself) &mdash; separate from this web login and from the SSH-to-serial console users. Not force-rotated automatically the way this web login is, so change it from the default at some point.</p>
         <div class="field-row column">
-          <label for="osPassword">New password</label>
+          <label for="osPassword">New password <span class="hint" id="osPasswordHint"></span></label>
           <input type="password" id="osPassword" minlength="8" />
         </div>
         <div class="field-row column">
@@ -600,6 +600,36 @@
           <tbody></tbody>
         </table>
         <button id="addAdminBtn">+ Add Admin</button>
+      </div>
+
+      <div class="panel">
+        <h2>Password Policy</h2>
+        <p class="hint">Applies everywhere a password gets set on this appliance &mdash; admin accounts, the Pi System Account, and console users.</p>
+        <div class="field-row">
+          <label for="policyMinLength">Minimum length</label>
+          <input type="number" id="policyMinLength" min="8" max="64" style="width: 6em" />
+        </div>
+        <div class="field-row">
+          <label for="policyRequireMixedCase">Require upper &amp; lowercase letters</label>
+          <input type="checkbox" id="policyRequireMixedCase" />
+        </div>
+        <div class="field-row">
+          <label for="policyRequireDigit">Require a digit</label>
+          <input type="checkbox" id="policyRequireDigit" />
+        </div>
+        <div class="field-row">
+          <label for="policyRequireSymbol">Require a symbol</label>
+          <input type="checkbox" id="policyRequireSymbol" />
+        </div>
+        <div class="field-row">
+          <label for="policyCheckBreached">Reject common/breached passwords</label>
+          <input type="checkbox" id="policyCheckBreached" />
+          <span class="hint">Checked against a bundled list of commonly breached passwords &mdash; nothing is ever sent anywhere to check this.</span>
+        </div>
+        <div class="field-row">
+          <button id="savePasswordPolicyBtn">Save Settings</button>
+        </div>
+        <div class="auth-error" id="passwordPolicyMsg"></div>
       </div>
 
       <div class="panel">

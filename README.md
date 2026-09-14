@@ -102,6 +102,14 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   Deliberately scoped to `config.json`: network settings, the SSH host key,
   the TLS certificate, and session captures are untouched. Requires typing
   `RESET` to confirm; the service restarts immediately afterward.
+- **Password policy** (Admin Account tab) — one configurable policy enforced
+  everywhere a password gets set: admin accounts, the Pi System Account, and
+  console users. Defaults to a 12-character minimum plus a check against a
+  bundled list of ~10,000 commonly breached passwords (checked locally, no
+  network call), favoring length over mandatory complexity per current NIST
+  800-63B guidance — with optional toggles (min length 8–64, require
+  upper/lowercase, a digit, a symbol) for appliances under a policy that
+  requires them. Every password field's hint text reflects the live policy.
 - **Network tab** — shows every network interface's status, IP address, and
   connection name (via NetworkManager), plus this Pi's public IP if it has
   internet access. Also enables/disables the Wi-Fi radio and joins a Wi-Fi
@@ -280,6 +288,12 @@ Updates** (so admins know a newer version exists), just without an
   Same recovery path as a lost admin password: edit
   `/opt/terminalserver/data/config.json` over SSH on port 22 (clear that
   admin's `totpEnabled`/`totpSecret`) and restart the service.
+- The breached-password list backing the password policy
+  (`lib/data/common-passwords.txt`, ~10,000 entries, ~70&nbsp;KB, sourced
+  from SecLists) is bundled at build time and checked entirely in-process —
+  no network call, no third-party API, ever. Tightening the policy only
+  applies going forward; it doesn't retroactively invalidate passwords set
+  before the change.
 - Session capture files (`/opt/terminalserver/data/captures`) accumulate
   indefinitely with no automatic rotation or cleanup — delete old ones from
   the Sessions tab (or the filesystem directly) if a port with capture
