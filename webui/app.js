@@ -1336,6 +1336,7 @@ async function loadFleetSettings() {
   document.getElementById('fleetMode').value = fleet.mode;
   document.getElementById('fleetHubHost').value = fleet.hubHost;
   document.getElementById('fleetHubPort').value = fleet.hubPort;
+  document.getElementById('fleetHubApiPort').value = fleet.hubApiPort;
   document.getElementById('fleetPublicKey').textContent = fleet.publicKey || '(unavailable)';
   setFleetStatus(fleet.connected, fleet.mode);
 }
@@ -1348,11 +1349,38 @@ document.getElementById('saveFleetBtn').addEventListener('click', async () => {
     const fleet = await api.post('/api/fleet', {
       mode: document.getElementById('fleetMode').value,
       hubHost: document.getElementById('fleetHubHost').value.trim(),
-      hubPort: Number(document.getElementById('fleetHubPort').value) || 2200
+      hubPort: Number(document.getElementById('fleetHubPort').value) || 2200,
+      hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443
     });
     setFleetStatus(fleet.connected, fleet.mode);
     msg.style.color = 'var(--ok)';
     msg.textContent = 'Saved.';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('enrollFleetBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('fleetEnrollMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = '';
+  const token = document.getElementById('fleetEnrollToken').value.trim();
+  if (!token) {
+    msg.textContent = 'Paste the token from the hub first.';
+    return;
+  }
+  try {
+    const fleet = await api.post('/api/fleet/enroll', {
+      hubHost: document.getElementById('fleetHubHost').value.trim(),
+      hubPort: Number(document.getElementById('fleetHubPort').value) || 2200,
+      hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
+      token
+    });
+    document.getElementById('fleetMode').value = fleet.mode;
+    setFleetStatus(fleet.connected, fleet.mode);
+    document.getElementById('fleetEnrollToken').value = '';
+    msg.style.color = 'var(--ok)';
+    msg.textContent = `Enrolled as "${fleet.siteName}".`;
   } catch (err) {
     msg.textContent = err.message;
   }

@@ -229,8 +229,10 @@
         <div class="field-row">
           <label for="fleetHubHost">Hub host</label>
           <input type="text" id="fleetHubHost" placeholder="central-office.example.com" autocomplete="off" />
-          <label for="fleetHubPort">Port</label>
+          <label for="fleetHubPort">Tunnel port</label>
           <input type="number" id="fleetHubPort" min="1" max="65535" style="width: 6em" />
+          <label for="fleetHubApiPort">API port</label>
+          <input type="number" id="fleetHubApiPort" min="1" max="65535" style="width: 6em" />
         </div>
         <div class="field-row">
           <button id="saveFleetBtn" class="primary">Save</button>
@@ -238,9 +240,17 @@
         <div class="field-row column">
           <label>This box's tunnel public key</label>
           <pre class="code-block" id="fleetPublicKey">loading...</pre>
-          <span class="hint">Paste this into the hub's Sites page when enrolling this box &mdash; that's the entire trust relationship, so copy it exactly.</span>
+          <span class="hint">Paste this into the hub's Sites page when enrolling this box by hand &mdash; that's the entire trust relationship, so copy it exactly. Or use a token instead, below.</span>
         </div>
         <div class="auth-error" id="fleetMsg"></div>
+
+        <div class="field-row column" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+          <label>Enroll with a token</label>
+          <span class="hint">Generated on the hub's Sites page &mdash; enters the hub host/ports above and this box's public key for you, in one step.</span>
+          <input type="text" id="fleetEnrollToken" placeholder="enrollment token" autocomplete="off" />
+          <button id="enrollFleetBtn">Enroll</button>
+        </div>
+        <div class="auth-error" id="fleetEnrollMsg"></div>
       </div>
 
       <div class="panel">

@@ -9,6 +9,7 @@ const logStore = require('./lib/logStore');
 const sshServer = require('./lib/sshServer');
 const tftpServer = require('./lib/tftpServer');
 const tunnelClient = require('./lib/tunnelClient');
+const fleetHeartbeat = require('./lib/fleetHeartbeat');
 const { createWebServer } = require('./lib/webServer');
 
 logStore.init(configStore.DATA_DIR);
@@ -37,21 +38,25 @@ if (configStore.getConfig().tftp.autoStart) {
 
 if (configStore.getConfig().fleet.mode === 'managed') {
   tunnelClient.start();
+  fleetHeartbeat.start();
 }
 
 sshServer.on('log', (line) => console.log(line));
 tftpServer.on('log', (line) => console.log(line));
 tunnelClient.on('log', (line) => console.log(line));
+fleetHeartbeat.on('log', (line) => console.log(line));
 
 process.on('SIGTERM', () => {
   sshServer.stop();
   tftpServer.stop();
   tunnelClient.stop();
+  fleetHeartbeat.stop();
   process.exit(0);
 });
 process.on('SIGINT', () => {
   sshServer.stop();
   tftpServer.stop();
   tunnelClient.stop();
+  fleetHeartbeat.stop();
   process.exit(0);
 });
