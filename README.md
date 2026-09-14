@@ -78,6 +78,23 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   the order it happened, to a plain-text file under
   `/opt/terminalserver/data/captures`. Browse, download, or delete captures
   from the Sessions tab.
+- **Device paths hidden by default** on the Serial Ports tab (screen-privacy
+  convenience, not an access control) — click **Show Device Paths** to
+  reveal them for the session, or again to re-hide.
+- **TLS certificate management** (Admin Account tab) — view the web UI's
+  current HTTPS certificate (type, subject, issuer, validity, SHA-256
+  fingerprint), upload a custom cert + key pair (PEM) to replace the
+  auto-generated self-signed one, or revert back to a fresh self-signed
+  cert. The uploaded pair is validated (parseable, and the key actually
+  matches the cert) entirely in memory before anything live is touched, so
+  a bad upload can't break HTTPS access. Takes effect after a restart — a
+  **Restart Service Now** button is right there for it.
+- **Reset to Factory Default** (Server tab) — wipes ports, console users,
+  admin accounts, and SSH/TFTP/web/syslog settings back to defaults
+  (reseeding the default admin account with a forced password change).
+  Deliberately scoped to `config.json`: network settings, the SSH host key,
+  the TLS certificate, and session captures are untouched. Requires typing
+  `RESET` to confirm; the service restarts immediately afterward.
 - **Network tab** — shows every network interface's status, IP address, and
   connection name (via NetworkManager), plus this Pi's public IP if it has
   internet access. Also enables/disables the Wi-Fi radio and joins a Wi-Fi

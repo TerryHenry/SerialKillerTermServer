@@ -189,6 +189,13 @@
         </div>
         <div class="auth-error" id="restoreMsg"></div>
       </div>
+      <div class="panel">
+        <h2>Reset to Factory Default</h2>
+        <p class="hint">Wipes all serial ports, console users, admin accounts, and SSH/TFTP/web/syslog settings back to what a freshly-provisioned appliance ships with. Network settings, the SSH host key, the TLS certificate, and session capture files are left untouched.</p>
+        <div class="field-row">
+          <button id="factoryResetBtn" class="danger">Reset to Factory Default&hellip;</button>
+        </div>
+      </div>
     </div>
 
     <div class="tab-content" id="tab-system">
@@ -348,6 +355,7 @@
           <tbody></tbody>
         </table>
         <button id="addPortBtn">+ Add Port</button>
+        <button id="toggleDevicePathsBtn" class="secondary">Show Device Paths</button>
       </div>
     </div>
 
@@ -565,6 +573,35 @@
         <button id="addAdminBtn">+ Add Admin</button>
       </div>
 
+      <div class="panel">
+        <h2>TLS Certificate</h2>
+        <p class="hint">Covers the web admin UI's HTTPS certificate (port 8443). A self-signed one is generated automatically on first boot; upload your own (from an internal CA, or Let's Encrypt via a DNS challenge) to replace it.</p>
+        <table class="data-table" id="tlsInfoTable">
+          <tbody>
+            <tr><th>Type</th><td id="tlsType">&mdash;</td></tr>
+            <tr><th>Subject</th><td id="tlsSubject">&mdash;</td></tr>
+            <tr><th>Issuer</th><td id="tlsIssuer">&mdash;</td></tr>
+            <tr><th>Valid</th><td id="tlsValidity">&mdash;</td></tr>
+            <tr><th>Fingerprint (SHA-256)</th><td><code id="tlsFingerprint">&mdash;</code></td></tr>
+          </tbody>
+        </table>
+        <div class="field-row column">
+          <label for="tlsCertFile">Certificate file (PEM)</label>
+          <input type="file" id="tlsCertFile" accept=".pem,.crt,.cer,.cert" />
+        </div>
+        <div class="field-row column">
+          <label for="tlsKeyFile">Private key file (PEM)</label>
+          <input type="file" id="tlsKeyFile" accept=".pem,.key" />
+        </div>
+        <div class="field-row">
+          <button id="uploadTlsCertBtn" class="primary">Upload</button>
+          <button id="revertTlsCertBtn" class="secondary">Revert to Self-Signed</button>
+          <button id="restartServiceBtn" class="secondary">Restart Service Now</button>
+        </div>
+        <p class="hint">A change here needs the service to restart before it takes effect &mdash; active SSH and web console sessions briefly disconnect, the same as any other restart.</p>
+        <div class="auth-error" id="tlsMsg"></div>
+      </div>
+
     </div>
 
     <div class="tab-content" id="tab-about">
@@ -752,6 +789,22 @@
       <div class="modal-actions">
         <button id="cancelAdminBtn" class="secondary">Cancel</button>
         <button id="saveAdminBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Factory reset confirmation -->
+  <div class="modal-backdrop" id="factoryResetModalBackdrop">
+    <div class="modal">
+      <h3>Reset to Factory Default</h3>
+      <p class="hint">Wipes all serial ports, console users, admin accounts, and SSH/TFTP/web/syslog settings back to their original defaults. The default admin account (<code>admin</code> / <code>letmein0!</code>) is recreated, forcing a password change on next login. Network settings, the SSH host key, the TLS certificate, and session capture files are left untouched. The service restarts immediately afterward and every active session, including this one, is signed out. This cannot be undone.</p>
+      <div class="field-row column">
+        <label for="factoryResetConfirmText">Type <code>RESET</code> to confirm</label>
+        <input type="text" id="factoryResetConfirmText" autocomplete="off" />
+      </div>
+      <div class="modal-actions">
+        <button id="cancelFactoryResetBtn" class="secondary">Cancel</button>
+        <button id="confirmFactoryResetBtn" class="danger" disabled>Reset Now</button>
       </div>
     </div>
   </div>

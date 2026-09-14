@@ -927,7 +927,123 @@ document.getElementById('restoreInput').addEventListener('change', async (e) => 
   }
 });
 
+// ---------- Factory reset ----------
+document.getElementById('factoryResetBtn').addEventListener('click', () => {
+  document.getElementById('factoryResetConfirmText').value = '';
+  document.getElementById('confirmFactoryResetBtn').disabled = true;
+  document.getElementById('factoryResetModalBackdrop').classList.add('open');
+});
+
+document.getElementById('cancelFactoryResetBtn').addEventListener('click', () => {
+  document.getElementById('factoryResetModalBackdrop').classList.remove('open');
+});
+
+document.getElementById('factoryResetConfirmText').addEventListener('input', (e) => {
+  document.getElementById('confirmFactoryResetBtn').disabled = e.target.value !== 'RESET';
+});
+
+document.getElementById('confirmFactoryResetBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('confirmFactoryResetBtn');
+  btn.disabled = true;
+  try {
+    await api.post('/api/factory-reset');
+  } catch (err) {
+    alert(err.message);
+    btn.disabled = false;
+    return;
+  }
+  document.getElementById('factoryResetModalBackdrop').classList.remove('open');
+  await pollUntilBackUp(() => {});
+  window.location.reload();
+});
+
+// ---------- TLS certificate ----------
+async function loadTlsInfo() {
+  try {
+    const info = await api.get('/api/tls/info');
+    document.getElementById('tlsType').textContent = info.selfSigned ? 'Self-signed (auto-generated)' : 'Custom';
+    document.getElementById('tlsSubject').textContent = info.subject;
+    document.getElementById('tlsIssuer').textContent = info.issuer;
+    document.getElementById('tlsValidity').textContent =
+      `${new Date(info.validFrom).toLocaleDateString()} – ${new Date(info.validTo).toLocaleDateString()}` +
+      (info.expired ? ' (expired)' : '');
+    document.getElementById('tlsFingerprint').textContent = info.fingerprint;
+  } catch (err) {
+    document.getElementById('tlsMsg').textContent = err.message;
+  }
+}
+
+document.getElementById('uploadTlsCertBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('tlsMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = '';
+  const certFile = document.getElementById('tlsCertFile').files[0];
+  const keyFile = document.getElementById('tlsKeyFile').files[0];
+  if (!certFile || !keyFile) {
+    msg.textContent = 'Choose both a certificate file and a private key file.';
+    return;
+  }
+  const formData = new FormData();
+  formData.append('cert', certFile);
+  formData.append('key', keyFile);
+  try {
+    const res = await fetch('/api/tls/upload', { method: 'POST', body: formData });
+    if (!res.ok) throw await apiError(res);
+    document.getElementById('tlsCertFile').value = '';
+    document.getElementById('tlsKeyFile').value = '';
+    await loadTlsInfo();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Certificate uploaded. Restart the service for it to take effect.';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('revertTlsCertBtn').addEventListener('click', async () => {
+  if (!confirm('Discard the current certificate and generate a fresh self-signed one?')) return;
+  const msg = document.getElementById('tlsMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = '';
+  try {
+    await api.post('/api/tls/revert');
+    await loadTlsInfo();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Reverted to a self-signed certificate. Restart the service for it to take effect.';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('restartServiceBtn').addEventListener('click', async () => {
+  if (!confirm('Restart the service now? Active SSH and web console sessions will briefly disconnect.')) return;
+  const msg = document.getElementById('tlsMsg');
+  msg.style.color = 'var(--text-dim)';
+  msg.textContent = 'Restarting…';
+  try {
+    await api.post('/api/system/restart-service');
+    const backUp = await pollUntilBackUp(() => {
+      msg.textContent = 'Waiting for the service to come back...';
+    });
+    if (backUp) {
+      msg.style.color = 'var(--ok)';
+      msg.textContent = 'Back up. Reloading…';
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      msg.style.color = 'var(--danger)';
+      msg.textContent = 'Did not come back within 3 minutes — check on it directly.';
+    }
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
 // ---------- Ports ----------
+// Off by default -- a device path (especially a /dev/serial/by-id/... one) can reveal
+// hardware identity/serial-number detail an admin may not want visible on a screen
+// someone's glancing at over their shoulder. Session-only: resets to hidden on reload.
+let devicePathsVisible = false;
+
 async function loadPortsTable() {
   const ports = await api.get('/api/ports');
   ports.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
@@ -946,9 +1062,12 @@ async function loadPortsTable() {
     const capturePill = p.captureEnabled
       ? '<span class="pill ok"><span class="dot"></span>On</span>'
       : '<span class="pill mute"><span class="dot"></span>Off</span>';
+    const pathText = devicePathsVisible
+      ? escapeHtml(p.path)
+      : '<span class="hint">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>';
     tr.innerHTML = `
       <td>${escapeHtml(p.label)}</td>
-      <td>${escapeHtml(p.path)}</td>
+      <td>${pathText}</td>
       <td>${p.baudRate}</td>
       <td>${p.dataBits}/${p.stopBits}/${p.parity}</td>
       <td>${accessPill(p.access)}</td>
@@ -1052,6 +1171,12 @@ function closePortModal() {
 }
 
 document.getElementById('addPortBtn').addEventListener('click', () => openPortModal(null));
+
+document.getElementById('toggleDevicePathsBtn').addEventListener('click', async (e) => {
+  devicePathsVisible = !devicePathsVisible;
+  e.target.textContent = devicePathsVisible ? 'Hide Device Paths' : 'Show Device Paths';
+  await loadPortsTable();
+});
 document.getElementById('cancelPortBtn').addEventListener('click', closePortModal);
 document.getElementById('refreshSystemPortsBtn').addEventListener('click', refreshSystemPortsDatalist);
 
@@ -1757,6 +1882,7 @@ async function initApp() {
   await loadUsersTable();
   await loadMyUsername();
   await loadAdminsTable();
+  await loadTlsInfo();
   await loadTotpStatus();
   await loadVersion();
   await loadUpdateStatus();

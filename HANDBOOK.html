@@ -526,6 +526,11 @@
         <span class="mark">Handle with care</span>
         <p>A backup file contains password hashes and SSH public keys for every account on the appliance &mdash; and, if you opted in, an SSH private key. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back every admin's password too, to whatever it was when that backup was taken.</p>
       </div>
+      <div class="card">
+        <h4>Reset to Factory Default</h4>
+        <p>Wipes every serial port, console user, and admin account, and every SSH/TFTP/web/syslog setting, back to what a freshly-provisioned appliance ships with &mdash; including recreating the default admin account (<code>admin</code> / <code>letmein0!</code>) with a forced password change on next login. Deliberately scoped to just that: network settings (static IP, Wi-Fi, DNS, NTP, timezone), the SSH host key, the <a href="#tab-admin">TLS certificate</a>, and any <a href="#tab-sessions">session captures</a> are all left exactly as they were, so this can't strand you off the network the way a full wipe could.</p>
+        <p>Requires typing <code>RESET</code> into the confirmation dialog before the button becomes clickable &mdash; there's no undo once it runs. The service restarts immediately afterward, dropping every active session (including whichever one triggered it) and requiring a fresh sign-in.</p>
+      </div>
     </section>
 
     <section id="tab-system">
@@ -592,6 +597,7 @@
           <li><strong>Capture sessions to file</strong> &mdash; off by default. When on, every session on that port (SSH or web console) is logged to a plain-text file, byte for byte, in the order it happened. See <a href="#tab-sessions">Session Captures</a>.</li>
         </ul>
         <p>Ports are referenced by ID internally, so renaming a label later doesn't break any user's assignment to it.</p>
+        <p>Device paths are masked by default in this table &mdash; click <strong>Show Device Paths</strong> above it to reveal them (and again to re-hide). Purely a screen-privacy convenience for this one browser tab; it resets back to hidden on reload and doesn't change anything about the ports themselves.</p>
       </div>
 
       <div class="callout warn">
@@ -712,6 +718,15 @@
         <ul>
           <li>A new admin you create sets their own password immediately &mdash; there's no shared default to force-rotate, unlike the original seeded account.</li>
           <li>You can't delete the account you're currently logged in as, and the system won't let the last remaining admin account be deleted at all &mdash; there's always a way back in.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>TLS Certificate</h4>
+        <p>Covers the web admin UI's own HTTPS certificate (port 8443). A self-signed one is generated automatically on first boot &mdash; this panel shows its type, subject, issuer, validity window, and SHA-256 fingerprint, and lets you replace it.</p>
+        <ul>
+          <li><strong>Upload</strong> &mdash; pick a certificate file and a matching private key (both PEM). Validated entirely before anything live is touched: a malformed file or a key that doesn't actually match the certificate is rejected outright, with a clear reason, and the currently-installed certificate is left in place either way.</li>
+          <li><strong>Revert to Self-Signed</strong> &mdash; discards whatever's installed and mints a fresh self-signed certificate, the same kind first boot generates.</li>
+          <li><strong>Restart Service Now</strong> &mdash; a certificate change only takes effect once the app restarts (the same reason a changed SSH listen port needs a Start/Stop cycle); this does that restart on the spot instead of requiring a trip to SSH on port 22. Active SSH and web console sessions briefly disconnect, the same as any other restart.</li>
         </ul>
       </div>
     </section>
@@ -871,6 +886,14 @@ tftp terminalserver.local
         <h4>Reboot and hostname changes are full-admin actions</h4>
         <p>Any admin account can reboot the Pi or change its hostname from the <a href="#tab-system">System tab</a> &mdash; both immediately affect every user of the appliance, not just the admin who clicked. The same principle as everywhere else in this handbook applies: only grant admin accounts to people you'd trust with that.</p>
       </div>
+      <div class="card">
+        <h4>A private key never has to leave the browser's upload</h4>
+        <p>Uploading a custom <a href="#tab-admin">TLS certificate</a> sends the private key over this same HTTPS connection, once, to be written to disk on the Pi &mdash; it's never logged, and the validation that checks it actually matches the certificate happens entirely in memory. Even so, treat that key file the same way you'd treat any other private key: don't email it, and delete your local copy once it's uploaded if you don't need it elsewhere.</p>
+      </div>
+      <div class="card">
+        <h4>Reset to Factory Default is irreversible</h4>
+        <p>There's no undo, and no confirmation beyond the typed <code>RESET</code> in the dialog itself &mdash; unlike Restore from Backup, there's no backup file to restore from afterward unless you took one yourself beforehand. Download a <a href="#tab-server">backup</a> first if there's any chance you'd want the current ports, users, or admin accounts back.</p>
+      </div>
     </section>
 
     <section id="troubleshooting">
@@ -930,6 +953,10 @@ tftp terminalserver.local
             <tr>
               <td>Traffic Debug shows nothing</td>
               <td>It only taps traffic already flowing through a session someone else has connected &mdash; it doesn't open the port itself. Connect a session to that port first (SSH or web console), then open Debug.</td>
+            </tr>
+            <tr>
+              <td><code>the certificate and private key do not match</code></td>
+              <td>The two PEM files uploaded to <a href="#tab-admin">TLS Certificate</a> weren't the two halves of the same pair &mdash; double check you picked the right key file for that certificate. Nothing is changed on a rejected upload; the previously-installed certificate stays in place.</td>
             </tr>
           </tbody>
         </table>
