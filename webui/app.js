@@ -52,8 +52,61 @@ const forceChangeScreen = document.getElementById('forceChangeScreen');
 const totpScreen = document.getElementById('totpScreen');
 const appRoot = document.getElementById('appRoot');
 
+// ---------- Password policy ----------
+// Fetched once at boot (public, no auth needed) so hint text is accurate on every
+// password field, including the pre-auth setup/forced-change screens.
+async function loadPasswordPolicy() {
+  try {
+    const policy = await api.get('/api/password-policy');
+    const hintText = `(${policy.description})`;
+    for (const id of [
+      'setupPasswordHint', 'forceChangePasswordHint', 'newAdminPasswordHint', 'osPasswordHint',
+      'userPasswordPolicyHint', 'adminPasswordPolicyHint'
+    ]) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = hintText;
+    }
+    for (const id of [
+      'setupPassword', 'forceChangePassword', 'forceChangePasswordConfirm',
+      'newAdminPassword', 'newAdminPasswordConfirm', 'osPassword', 'osPasswordConfirm',
+      'userPassword', 'userPasswordConfirm', 'adminPassword', 'adminPasswordConfirm'
+    ]) {
+      const el = document.getElementById(id);
+      if (el) el.minLength = policy.minLength;
+    }
+    document.getElementById('policyMinLength').value = policy.minLength;
+    document.getElementById('policyRequireMixedCase').checked = policy.requireMixedCase;
+    document.getElementById('policyRequireDigit').checked = policy.requireDigit;
+    document.getElementById('policyRequireSymbol').checked = policy.requireSymbol;
+    document.getElementById('policyCheckBreached').checked = policy.checkBreached;
+  } catch {
+    // non-fatal -- hints just stay at their static fallback text
+  }
+}
+
+document.getElementById('savePasswordPolicyBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('passwordPolicyMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = '';
+  try {
+    await api.post('/api/password-policy', {
+      minLength: Number(document.getElementById('policyMinLength').value),
+      requireMixedCase: document.getElementById('policyRequireMixedCase').checked,
+      requireDigit: document.getElementById('policyRequireDigit').checked,
+      requireSymbol: document.getElementById('policyRequireSymbol').checked,
+      checkBreached: document.getElementById('policyCheckBreached').checked
+    });
+    await loadPasswordPolicy();
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Saved.';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
 // ---------- Auth bootstrap ----------
 async function boot() {
+  await loadPasswordPolicy();
   const session = await api.get('/api/session');
   if (session.needsSetup) {
     show(setupScreen);
@@ -1270,6 +1323,41 @@ document.getElementById('toggleWebTerminalBtn').addEventListener('click', async 
   setWebTerminalStatus(result.enabled);
 });
 
+// ---------- Central Office (Fleet) ----------
+function setFleetStatus(connected, mode) {
+  const pill = document.getElementById('fleetStatusPill');
+  const text = document.getElementById('fleetStatusText');
+  pill.classList.toggle('running', connected);
+  text.textContent = mode !== 'managed' ? 'Disabled' : connected ? 'Connected' : 'Disconnected';
+}
+
+async function loadFleetSettings() {
+  const fleet = await api.get('/api/fleet');
+  document.getElementById('fleetMode').value = fleet.mode;
+  document.getElementById('fleetHubHost').value = fleet.hubHost;
+  document.getElementById('fleetHubPort').value = fleet.hubPort;
+  document.getElementById('fleetPublicKey').textContent = fleet.publicKey || '(unavailable)';
+  setFleetStatus(fleet.connected, fleet.mode);
+}
+
+document.getElementById('saveFleetBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('fleetMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = '';
+  try {
+    const fleet = await api.post('/api/fleet', {
+      mode: document.getElementById('fleetMode').value,
+      hubHost: document.getElementById('fleetHubHost').value.trim(),
+      hubPort: Number(document.getElementById('fleetHubPort').value) || 2200
+    });
+    setFleetStatus(fleet.connected, fleet.mode);
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Saved.';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+});
+
 // ---------- Users ----------
 
 async function loadUsersTable() {
@@ -1743,6 +1831,10 @@ function connectEvents() {
   eventSource.addEventListener('sessions', (e) => renderSessions(JSON.parse(e.data)));
   eventSource.addEventListener('tftp-status', (e) => setTftpStatus(JSON.parse(e.data).running));
   eventSource.addEventListener('stats', (e) => renderStats(JSON.parse(e.data)));
+  eventSource.addEventListener('fleet-status', (e) => {
+    const status = JSON.parse(e.data);
+    setFleetStatus(status.connected, document.getElementById('fleetMode').value);
+  });
 }
 
 function escapeHtml(str) {
@@ -1875,6 +1967,7 @@ async function initApp() {
   const status = await api.get('/api/server/status');
   setStatus(status.running);
   await loadServerSettings();
+  await loadFleetSettings();
   await loadNetwork();
   await loadTftpSettings();
   await loadTftpFiles();

@@ -16,7 +16,7 @@
       <p class="hint">Create the administrator account used to manage this console server.</p>
       <label>Admin username</label>
       <input type="text" id="setupUsername" value="admin" required />
-      <label>Admin password <span class="hint">(min 8 characters)</span></label>
+      <label>Admin password <span class="hint" id="setupPasswordHint">(min 8 characters)</span></label>
       <input type="password" id="setupPassword" minlength="8" required />
       <div class="auth-error" id="setupError"></div>
       <button type="submit" class="primary">Create Admin Account</button>
@@ -43,7 +43,7 @@
       <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
       <h1>Change the default password</h1>
       <p class="hint">This account is still using the default password. Choose a new one to continue.</p>
-      <label>New password <span class="hint">(min 8 characters)</span></label>
+      <label>New password <span class="hint" id="forceChangePasswordHint">(min 8 characters)</span></label>
       <input type="password" id="forceChangePassword" minlength="8" required />
       <label>Confirm password</label>
       <input type="password" id="forceChangePasswordConfirm" minlength="8" required />
@@ -210,6 +210,37 @@
           <button id="toggleWebTerminalBtn" class="primary">Enable</button>
         </div>
         <p class="hint">Lets the accounts on the Users tab get a serial console right in the browser, alongside SSH &mdash; no extra software needed. Off by default.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Central Office (Fleet)</h2>
+        <p class="hint">Tunnels this box out to a Central Office hub so it can be reached and managed alongside other sites from one place. Off by default &mdash; standalone mode (everything on this page above) works exactly as it always has either way.</p>
+        <div class="field-row">
+          <label for="fleetMode">Mode</label>
+          <select id="fleetMode">
+            <option value="standalone">Standalone (this box only)</option>
+            <option value="managed">Managed (tunnel to a hub)</option>
+          </select>
+          <span class="status-pill" id="fleetStatusPill">
+            <span class="dot"></span>
+            <span id="fleetStatusText">Disabled</span>
+          </span>
+        </div>
+        <div class="field-row">
+          <label for="fleetHubHost">Hub host</label>
+          <input type="text" id="fleetHubHost" placeholder="central-office.example.com" autocomplete="off" />
+          <label for="fleetHubPort">Port</label>
+          <input type="number" id="fleetHubPort" min="1" max="65535" style="width: 6em" />
+        </div>
+        <div class="field-row">
+          <button id="saveFleetBtn" class="primary">Save</button>
+        </div>
+        <div class="field-row column">
+          <label>This box's tunnel public key</label>
+          <pre class="code-block" id="fleetPublicKey">loading...</pre>
+          <span class="hint">Paste this into the hub's Sites page when enrolling this box &mdash; that's the entire trust relationship, so copy it exactly.</span>
+        </div>
+        <div class="auth-error" id="fleetMsg"></div>
       </div>
 
       <div class="panel">
@@ -519,7 +550,7 @@
         <h2>My Account</h2>
         <p class="hint">Signed in as <strong id="myUsername">&mdash;</strong>.</p>
         <div class="field-row column">
-          <label for="newAdminPassword">New password</label>
+          <label for="newAdminPassword">New password <span class="hint" id="newAdminPasswordHint"></span></label>
           <input type="password" id="newAdminPassword" minlength="8" />
         </div>
         <div class="field-row column">
@@ -536,7 +567,7 @@
         <h2>Pi System Account</h2>
         <p class="hint">The Linux <code>admin</code> account used for SSH on port 22 (normal shell access to the Pi itself) &mdash; separate from this web login and from the SSH-to-serial console users. Not force-rotated automatically the way this web login is, so change it from the default at some point.</p>
         <div class="field-row column">
-          <label for="osPassword">New password</label>
+          <label for="osPassword">New password <span class="hint" id="osPasswordHint"></span></label>
           <input type="password" id="osPassword" minlength="8" />
         </div>
         <div class="field-row column">
@@ -600,6 +631,36 @@
           <tbody></tbody>
         </table>
         <button id="addAdminBtn">+ Add Admin</button>
+      </div>
+
+      <div class="panel">
+        <h2>Password Policy</h2>
+        <p class="hint">Applies everywhere a password gets set on this appliance &mdash; admin accounts, the Pi System Account, and console users.</p>
+        <div class="field-row">
+          <label for="policyMinLength">Minimum length</label>
+          <input type="number" id="policyMinLength" min="8" max="64" style="width: 6em" />
+        </div>
+        <div class="field-row">
+          <label for="policyRequireMixedCase">Require upper &amp; lowercase letters</label>
+          <input type="checkbox" id="policyRequireMixedCase" />
+        </div>
+        <div class="field-row">
+          <label for="policyRequireDigit">Require a digit</label>
+          <input type="checkbox" id="policyRequireDigit" />
+        </div>
+        <div class="field-row">
+          <label for="policyRequireSymbol">Require a symbol</label>
+          <input type="checkbox" id="policyRequireSymbol" />
+        </div>
+        <div class="field-row">
+          <label for="policyCheckBreached">Reject common/breached passwords</label>
+          <input type="checkbox" id="policyCheckBreached" />
+          <span class="hint">Checked against a bundled list of commonly breached passwords &mdash; nothing is ever sent anywhere to check this.</span>
+        </div>
+        <div class="field-row">
+          <button id="savePasswordPolicyBtn">Save Settings</button>
+        </div>
+        <div class="auth-error" id="passwordPolicyMsg"></div>
       </div>
 
       <div class="panel">
@@ -747,6 +808,7 @@
       <div class="field-row column" id="userPasswordRow">
         <label for="userPassword">Password <span class="hint">(leave blank to keep existing)</span></label>
         <input type="password" id="userPassword" />
+        <span class="hint" id="userPasswordPolicyHint"></span>
         <label for="userPasswordConfirm">Confirm password</label>
         <input type="password" id="userPasswordConfirm" />
         <span class="field-error" id="userPasswordError"></span>
@@ -812,6 +874,7 @@
       <div class="field-row column">
         <label for="adminPassword">Password <span class="hint" id="adminPasswordHint">(leave blank to keep existing)</span></label>
         <input type="password" id="adminPassword" minlength="8" />
+        <span class="hint" id="adminPasswordPolicyHint"></span>
         <label for="adminPasswordConfirm">Confirm password</label>
         <input type="password" id="adminPasswordConfirm" minlength="8" />
         <span class="field-error" id="adminPasswordError"></span>
