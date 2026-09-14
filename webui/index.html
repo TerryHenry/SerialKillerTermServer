@@ -242,6 +242,11 @@
           <pre class="code-block" id="fleetPublicKey">loading...</pre>
           <span class="hint">Paste this into the hub's Sites page when enrolling this box by hand &mdash; that's the entire trust relationship, so copy it exactly. Or use a token instead, below.</span>
         </div>
+        <div class="field-row column">
+          <label for="fleetHostKeyFingerprint">Hub SSH host key (from the hub's own Account tab)</label>
+          <input type="text" id="fleetHostKeyFingerprint" placeholder="ssh-ed25519 AAAA... (blank = don't verify)" autocomplete="off" />
+          <span class="hint" id="fleetHostKeyHint"></span>
+        </div>
         <div class="auth-error" id="fleetMsg"></div>
 
         <div class="field-row column" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">

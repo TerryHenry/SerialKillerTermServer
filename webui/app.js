@@ -1331,14 +1331,31 @@ function setFleetStatus(connected, mode) {
   text.textContent = mode !== 'managed' ? 'Disabled' : connected ? 'Connected' : 'Disconnected';
 }
 
+function setFleetHostKeyWarning(mode, fingerprint) {
+  const hint = document.getElementById('fleetHostKeyHint');
+  if (mode !== 'managed') {
+    hint.textContent = '';
+    return;
+  }
+  if (fingerprint) {
+    hint.style.color = 'var(--ok)';
+    hint.textContent = 'Pinned -- the tunnel will refuse to connect if the hub presents a different key.';
+  } else {
+    hint.style.color = 'var(--warn)';
+    hint.textContent = 'Not pinned -- the tunnel trusts whatever host key the hub presents. Paste the hub’s key above to close this gap.';
+  }
+}
+
 async function loadFleetSettings() {
   const fleet = await api.get('/api/fleet');
   document.getElementById('fleetMode').value = fleet.mode;
   document.getElementById('fleetHubHost').value = fleet.hubHost;
   document.getElementById('fleetHubPort').value = fleet.hubPort;
   document.getElementById('fleetHubApiPort').value = fleet.hubApiPort;
+  document.getElementById('fleetHostKeyFingerprint').value = fleet.hubHostKeyFingerprint || '';
   document.getElementById('fleetPublicKey').textContent = fleet.publicKey || '(unavailable)';
   setFleetStatus(fleet.connected, fleet.mode);
+  setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
 }
 
 document.getElementById('saveFleetBtn').addEventListener('click', async () => {
@@ -1350,9 +1367,11 @@ document.getElementById('saveFleetBtn').addEventListener('click', async () => {
       mode: document.getElementById('fleetMode').value,
       hubHost: document.getElementById('fleetHubHost').value.trim(),
       hubPort: Number(document.getElementById('fleetHubPort').value) || 2200,
-      hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443
+      hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
+      hubHostKeyFingerprint: document.getElementById('fleetHostKeyFingerprint').value.trim()
     });
     setFleetStatus(fleet.connected, fleet.mode);
+    setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
     msg.style.color = 'var(--ok)';
     msg.textContent = 'Saved.';
   } catch (err) {
@@ -1378,6 +1397,7 @@ document.getElementById('enrollFleetBtn').addEventListener('click', async () => 
     });
     document.getElementById('fleetMode').value = fleet.mode;
     setFleetStatus(fleet.connected, fleet.mode);
+    setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
     document.getElementById('fleetEnrollToken').value = '';
     msg.style.color = 'var(--ok)';
     msg.textContent = `Enrolled as "${fleet.siteName}".`;
