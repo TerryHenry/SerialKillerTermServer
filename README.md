@@ -1,5 +1,7 @@
 # Serial Killer Terminal Server
 
+Latest Release is here: https://github.com/TerryHenry/SerialKillerTermServer/releases
+
 SSH-to-serial console server appliance. Supports
 multiple simultaneous users and multiple serial ports, configured through a
 web GUI. Ships as a bootable Raspberry Pi OS image.
