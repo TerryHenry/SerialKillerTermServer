@@ -232,7 +232,7 @@ button.danger { color: var(--danger); border-color: var(--danger-border); }
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--accent-hover);
   padding: 0 10px 5px;
 }
 

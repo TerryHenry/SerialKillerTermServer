@@ -499,19 +499,8 @@
         </ul>
       </div>
       <div class="card">
-        <h4>System Control</h4>
-        <ul>
-          <li><strong>Hostname</strong> &mdash; the name this Pi identifies itself as on the network (letters, digits, and hyphens only, up to 63 characters). Takes effect immediately; anything already connected by IP address is unaffected.</li>
-          <li><strong>Also update the mDNS (.local) name</strong> &mdash; off by default. Changing the hostname alone does <em>not</em> change what <code>&lt;name&gt;.local</code> resolves to &mdash; the existing <code>.local</code> address keeps working on purpose, so a rename doesn't silently break bookmarks, scripts, or other devices' saved connections. Check this box to also restart <code>avahi-daemon</code> so the mDNS name catches up to match the new hostname.</li>
-        </ul>
-      </div>
-      <div class="card">
         <h4>System Information</h4>
         <p>A read-only snapshot for support and troubleshooting: OS release, kernel version, CPU model and core count, total memory, disk usage, the Node.js runtime version, and the running app version &mdash; everything you'd otherwise need a shell session on the Pi to look up.</p>
-      </div>
-      <div class="card">
-        <h4>Danger Zone: Reboot Now</h4>
-        <p>Restarts the Pi itself (not just the app). Drops every active SSH and web console session immediately; the page waits for it to come back and reloads itself automatically, the same way <a href="#tab-about">Apply Update</a> does.</p>
       </div>
 
       <h3 id="tab-server">Server</h3>
@@ -537,7 +526,7 @@
       </div>
       <div class="callout warn">
         <span class="mark">Danger Zone</span>
-        <p>Restore from Backup and Reset to Factory Default live together in a visually distinct "Danger Zone" area of this tab, separate from the routine settings above &mdash; both replace or wipe the current configuration outright.</p>
+        <p>Restore from Backup, Reset to Factory Default, and Reboot Now live together in a visually distinct "Danger Zone" area of this tab, separate from the routine settings above &mdash; each replaces, wipes, or restarts outright.</p>
       </div>
       <div class="card">
         <h4>Restore from Backup</h4>
@@ -548,6 +537,10 @@
         <h4>Reset to Factory Default</h4>
         <p>Wipes every serial port, console user, and admin account, and every SSH/TFTP/web/syslog setting, back to what a freshly-provisioned appliance ships with &mdash; including recreating the default admin account (<code>admin</code> / <code>letmein0!</code>) with a forced password change on next login. Deliberately scoped to just that: network settings (static IP, Wi-Fi, DNS, NTP, timezone), the SSH host key, the <a href="#tab-admin">TLS certificate</a>, and any <a href="#tab-sessions">session captures</a> are all left exactly as they were, so this can't strand you off the network the way a full wipe could.</p>
         <p>Requires typing <code>RESET</code> into the confirmation dialog before the button becomes clickable &mdash; there's no undo once it runs. The service restarts immediately afterward, dropping every active session (including whichever one triggered it) and requiring a fresh sign-in.</p>
+      </div>
+      <div class="card">
+        <h4>Reboot Now</h4>
+        <p>Restarts the Pi itself (not just the app). Drops every active SSH and web console session immediately; the page waits for it to come back and reloads itself automatically, the same way <a href="#tab-about">Apply Update</a> does.</p>
       </div>
     </section>
 
@@ -579,6 +572,13 @@
           <li><strong>NTP Server</strong> &mdash; defaults to <code>pool.ntp.org</code>. The pill next to it shows whether the clock is currently synced.</li>
           <li><strong>Timezone</strong> &mdash; a dropdown of the full IANA timezone list (e.g. <code>America/New_York</code>); type a few letters while it's focused to jump straight to a match.</li>
           <li><strong>DNS Servers</strong> &mdash; IPv4 addresses only. Shows what's actually in effect right now, whether that's from DHCP or a previous override. Enter one or more servers (comma or space separated) and <strong>Save</strong> to override, or click <strong>Use DHCP</strong> to go back to whatever the network hands out automatically.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>System Control</h4>
+        <ul>
+          <li><strong>Hostname</strong> &mdash; the name this Pi identifies itself as on the network (letters, digits, and hyphens only, up to 63 characters). Takes effect immediately; anything already connected by IP address is unaffected.</li>
+          <li><strong>Also update the mDNS (.local) name</strong> &mdash; off by default. Changing the hostname alone does <em>not</em> change what <code>&lt;name&gt;.local</code> resolves to &mdash; the existing <code>.local</code> address keeps working on purpose, so a rename doesn't silently break bookmarks, scripts, or other devices' saved connections. Check this box to also restart <code>avahi-daemon</code> so the mDNS name catches up to match the new hostname.</li>
         </ul>
       </div>
       <div class="callout tip">
@@ -885,7 +885,7 @@ tftp terminalserver.local
       </div>
       <div class="card">
         <h4>Reboot and hostname changes are full-admin actions</h4>
-        <p>Any admin account can reboot the Pi or change its hostname from the <a href="#tab-dashboard">Dashboard tab</a> &mdash; both immediately affect every user of the appliance, not just the admin who clicked. The same principle as everywhere else in this handbook applies: only grant admin accounts to people you'd trust with that.</p>
+        <p>Any admin account can reboot the Pi (<a href="#tab-server">Server tab</a>, Danger Zone) or change its hostname (<a href="#tab-network">Network tab</a>) &mdash; both immediately affect every user of the appliance, not just the admin who clicked. The same principle as everywhere else in this handbook applies: only grant admin accounts to people you'd trust with that.</p>
       </div>
       <div class="card">
         <h4>A private key never has to leave the browser's upload</h4>

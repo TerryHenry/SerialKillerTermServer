@@ -1574,7 +1574,7 @@ document.getElementById('saveHostnameBtn').addEventListener('click', async () =>
 
 document.getElementById('rebootBtn').addEventListener('click', async () => {
   if (!confirm('Reboot the Pi now? All active SSH and web console sessions will be dropped immediately.')) return;
-  const msg = document.getElementById('systemControlMsg');
+  const msg = document.getElementById('rebootMsg');
   msg.style.color = 'var(--text-dim)';
   msg.textContent = 'Rebooting…';
   try {

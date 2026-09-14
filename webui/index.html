@@ -152,21 +152,6 @@
       </div>
 
       <div class="panel">
-        <h2>System Control</h2>
-        <div class="field-row">
-          <label for="systemHostname">Hostname</label>
-          <input type="text" id="systemHostname" autocomplete="off" />
-          <button id="saveHostnameBtn">Save</button>
-        </div>
-        <div class="field-row">
-          <label for="systemUpdateMdns">Also update the mDNS (.local) name</label>
-          <input type="checkbox" id="systemUpdateMdns" />
-          <span class="hint">Off by default, so existing bookmarks/scripts pointing at the current <code>.local</code> address keep working even after renaming the host. Check this to make the <code>.local</code> address match the new hostname too.</span>
-        </div>
-        <div class="auth-error" id="systemControlMsg"></div>
-      </div>
-
-      <div class="panel">
         <h2>System Information</h2>
         <table class="data-table" id="systemInfoTable">
           <tbody>
@@ -181,17 +166,6 @@
           </tbody>
         </table>
         <button id="refreshSystemInfoBtn">Refresh</button>
-      </div>
-
-      <div class="panel danger-zone">
-        <h2>Danger Zone</h2>
-        <div class="field-row">
-          <div class="danger-zone-text">
-            <strong>Reboot Now</strong>
-            <p class="hint">Restarts the Pi itself. Drops all active SSH and web console sessions immediately and takes roughly a minute to come back.</p>
-          </div>
-          <button id="rebootBtn" class="danger">Reboot Now</button>
-        </div>
       </div>
     </div>
 
@@ -269,6 +243,14 @@
           </div>
           <button id="factoryResetBtn" class="danger">Reset to Factory Default&hellip;</button>
         </div>
+        <div class="field-row">
+          <div class="danger-zone-text">
+            <strong>Reboot Now</strong>
+            <p class="hint">Restarts the Pi itself. Drops all active SSH and web console sessions immediately and takes roughly a minute to come back.</p>
+          </div>
+          <button id="rebootBtn" class="danger">Reboot Now</button>
+        </div>
+        <div class="auth-error" id="rebootMsg"></div>
       </div>
     </div>
 
@@ -376,6 +358,21 @@
         </div>
         <p class="hint">IPv4 addresses only. DNS Servers shows what's currently in effect. Leave it as-is (or click Use DHCP) to keep using whatever your network hands out automatically.</p>
         <div class="auth-error" id="timeDnsMsg"></div>
+      </div>
+
+      <div class="panel">
+        <h2>System Control</h2>
+        <div class="field-row">
+          <label for="systemHostname">Hostname</label>
+          <input type="text" id="systemHostname" autocomplete="off" />
+          <button id="saveHostnameBtn">Save</button>
+        </div>
+        <div class="field-row">
+          <label for="systemUpdateMdns">Also update the mDNS (.local) name</label>
+          <input type="checkbox" id="systemUpdateMdns" />
+          <span class="hint">Off by default, so existing bookmarks/scripts pointing at the current <code>.local</code> address keep working even after renaming the host. Check this to make the <code>.local</code> address match the new hostname too.</span>
+        </div>
+        <div class="auth-error" id="systemControlMsg"></div>
       </div>
     </div>
 

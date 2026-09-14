@@ -62,16 +62,19 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   touched; one click rolls back if you change your mind. See
   [Applying updates](#applying-updates) below.
 - **Dashboard tab** — live CPU, memory, disk, and uptime, total connected
-  clients, and a live status (present/missing) and client count for every
-  configured serial port. Also carries system control and info: a hostname
-  field (change and it takes effect immediately, no reboot needed), a
-  read-only system-information panel (OS release, kernel version, CPU
-  model/cores, total memory, disk usage, Node.js and app versions), and a
-  Danger Zone with a Reboot Now button. Changing the hostname leaves the
-  existing `<name>.local` mDNS address alone unless you also check **Also
-  update the mDNS (.local) name**, which restarts `avahi-daemon` so it
-  catches up to match — opt-in, so a rename can't silently break something
-  else that's bookmarked the old `.local` address.
+  clients, a live status (present/missing) and client count for every
+  configured serial port, and a read-only system-information panel (OS
+  release, kernel version, CPU model/cores, total memory, disk usage,
+  Node.js and app versions).
+- **Network tab** also carries a System Control panel: a hostname field
+  (change and it takes effect immediately, no reboot needed). Changing the
+  hostname leaves the existing `<name>.local` mDNS address alone unless you
+  also check **Also update the mDNS (.local) name**, which restarts
+  `avahi-daemon` so it catches up to match — opt-in, so a rename can't
+  silently break something else that's bookmarked the old `.local` address.
+- **Server tab** has a Danger Zone with Restore from Backup, Reset to
+  Factory Default, and Reboot Now grouped together, set apart from the
+  routine settings above them.
 - **Per-port traffic counters and live debug** — the Serial Ports tab shows
   cumulative RX/TX byte counts per port since the app last started, plus a
   Debug button that opens a live, read-only hex/ASCII dump of traffic
@@ -255,10 +258,10 @@ Updates** (so admins know a newer version exists), just without an
   transition outright (`sudo: unable to change to root gid: Operation not
   permitted`). The actual privilege boundary is the sudoers rule, not the
   capability set. The same helper script (and thus the same sudoers rule,
-  unchanged) also handles the Dashboard tab's reboot and hostname-change
-  actions — the sudoers grant covers the whole script file, not individual
-  subcommands, so extending it never requires touching `setup.sh` or
-  re-provisioning an already-deployed Pi.
+  unchanged) also handles the Server tab's reboot action and the Network
+  tab's hostname change — the sudoers grant covers the whole script file,
+  not individual subcommands, so extending it never requires touching
+  `setup.sh` or re-provisioning an already-deployed Pi.
 - The in-place updater keeps this same narrow-privilege model: everything
   through staging, syntax-checking, `npm install`, and backup runs
   unprivileged as the `terminalserver` account (which already owns
