@@ -36,7 +36,12 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   regardless of the port, and a `shared-ro` port blocks typing for everyone
   regardless of the user.
 - **Web admin UI** (default port `8443`, HTTPS with a self-signed
-  certificate generated on first run) — configure serial ports, users
+  certificate generated on first run) — a sidebar nav groups its ten tabs by
+  purpose (Access, Network, Server, Security, plus Dashboard and About on
+  their own), destructive actions (reboot, restore-from-backup, factory
+  reset) are set apart in a visually distinct "Danger Zone" wherever they
+  appear, and the whole UI follows the OS/browser's light or dark
+  preference automatically. Configure serial ports, users
   (password and/or SSH public-key auth), SSH server settings, TFTP, and view
   live sessions/logs. Supports multiple admin accounts (not just one shared
   login), and login attempts are throttled after repeated failures.
@@ -56,18 +61,17 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   Checksum-verified, syntax-checked, and backed up before anything live is
   touched; one click rolls back if you change your mind. See
   [Applying updates](#applying-updates) below.
-- **Dashboard tab** — live CPU, memory, and disk usage, total connected
+- **Dashboard tab** — live CPU, memory, disk, and uptime, total connected
   clients, and a live status (present/missing) and client count for every
-  configured serial port.
-- **System tab** — live uptime, a hostname field (change and it takes effect
-  immediately, no reboot needed), a Reboot Now button, and a read-only
-  system-information panel (OS release, kernel version, CPU model/cores,
-  total memory, disk usage, Node.js and app versions) for support and
-  troubleshooting without needing a separate shell session. Changing the
-  hostname leaves the existing `<name>.local` mDNS address alone unless you
-  also check **Also update the mDNS (.local) name**, which restarts
-  `avahi-daemon` so it catches up to match — opt-in, so a rename can't
-  silently break something else that's bookmarked the old `.local` address.
+  configured serial port. Also carries system control and info: a hostname
+  field (change and it takes effect immediately, no reboot needed), a
+  read-only system-information panel (OS release, kernel version, CPU
+  model/cores, total memory, disk usage, Node.js and app versions), and a
+  Danger Zone with a Reboot Now button. Changing the hostname leaves the
+  existing `<name>.local` mDNS address alone unless you also check **Also
+  update the mDNS (.local) name**, which restarts `avahi-daemon` so it
+  catches up to match — opt-in, so a rename can't silently break something
+  else that's bookmarked the old `.local` address.
 - **Per-port traffic counters and live debug** — the Serial Ports tab shows
   cumulative RX/TX byte counts per port since the app last started, plus a
   Debug button that opens a live, read-only hex/ASCII dump of traffic
@@ -251,7 +255,7 @@ Updates** (so admins know a newer version exists), just without an
   transition outright (`sudo: unable to change to root gid: Operation not
   permitted`). The actual privilege boundary is the sudoers rule, not the
   capability set. The same helper script (and thus the same sudoers rule,
-  unchanged) also handles the System tab's reboot and hostname-change
+  unchanged) also handles the Dashboard tab's reboot and hostname-change
   actions — the sudoers grant covers the whole script file, not individual
   subcommands, so extending it never requires touching `setup.sh` or
   re-provisioning an already-deployed Pi.

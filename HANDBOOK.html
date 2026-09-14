@@ -406,7 +406,6 @@
     <ul>
       <li><a href="#tab-dashboard">Dashboard</a></li>
       <li><a href="#tab-server">Server</a></li>
-      <li><a href="#tab-system">System</a></li>
       <li><a href="#tab-network">Network</a></li>
       <li><a href="#tab-ports">Serial Ports</a></li>
       <li><a href="#tab-tftp">TFTP</a></li>
@@ -488,16 +487,31 @@
 
     <section id="tab-dashboard">
       <h2>Web Admin UI</h2>
-      <p class="lede">Eleven tabs across the top of the admin UI. Here's what each one does.</p>
+      <p class="lede">Ten tabs, grouped in the sidebar by what they're for (Access, Network, Server, Security), plus Dashboard and About on their own. Here's what each one does.</p>
 
       <h3>Dashboard</h3>
       <div class="card">
         <p>The landing tab &mdash; a live overview, updating automatically every few seconds without a page refresh.</p>
         <ul>
-          <li><strong>CPU, Memory, Disk</strong> &mdash; each shown as a percentage with a bar that shifts from the accent color to amber at 70% and red at 90%, plus the raw used/total underneath for memory and disk.</li>
+          <li><strong>CPU, Memory, Disk, Uptime</strong> &mdash; each shown as a stat card; CPU/Memory/Disk get a bar that shifts from the accent color to amber at 70% and red at 90%, plus the raw used/total underneath for memory and disk.</li>
           <li><strong>Connected Clients</strong> &mdash; the current SSH session count across every port.</li>
           <li><strong>Serial Ports</strong> &mdash; every configured port, alphabetically, live: a <strong>Present</strong>/<strong>Missing</strong> status pill (whether its device file actually exists right now &mdash; the first place to look if an adapter drops out or a USB hub loses power) alongside how many clients are connected to it.</li>
         </ul>
+      </div>
+      <div class="card">
+        <h4>System Control</h4>
+        <ul>
+          <li><strong>Hostname</strong> &mdash; the name this Pi identifies itself as on the network (letters, digits, and hyphens only, up to 63 characters). Takes effect immediately; anything already connected by IP address is unaffected.</li>
+          <li><strong>Also update the mDNS (.local) name</strong> &mdash; off by default. Changing the hostname alone does <em>not</em> change what <code>&lt;name&gt;.local</code> resolves to &mdash; the existing <code>.local</code> address keeps working on purpose, so a rename doesn't silently break bookmarks, scripts, or other devices' saved connections. Check this box to also restart <code>avahi-daemon</code> so the mDNS name catches up to match the new hostname.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>System Information</h4>
+        <p>A read-only snapshot for support and troubleshooting: OS release, kernel version, CPU model and core count, total memory, disk usage, the Node.js runtime version, and the running app version &mdash; everything you'd otherwise need a shell session on the Pi to look up.</p>
+      </div>
+      <div class="card">
+        <h4>Danger Zone: Reboot Now</h4>
+        <p>Restarts the Pi itself (not just the app). Drops every active SSH and web console session immediately; the page waits for it to come back and reloads itself automatically, the same way <a href="#tab-about">Apply Update</a> does.</p>
       </div>
 
       <h3 id="tab-server">Server</h3>
@@ -517,36 +531,23 @@
         <p>A toggle here turns browser-based serial access on or off for every account on the <a href="#tab-users">Users tab</a> at once &mdash; <strong>off by default</strong> on a fresh appliance. When enabled, those same accounts can sign into <code>/terminal</code> with their username and password and get a console right in the browser, alongside SSH. Turning it off immediately cuts off new logins and connections; it doesn't touch SSH access at all. Hover the &#9432; next to the toggle for the exact URL to reach it at.</p>
       </div>
       <div class="card">
-        <h4>Backup &amp; Restore</h4>
+        <h4>Backup</h4>
         <p><strong>Download Backup</strong> saves everything in the app's config &mdash; SSH/TFTP/web/Network settings, serial ports, users, and admin accounts, including password hashes and public keys &mdash; as a single JSON file. It also captures the NTP server, timezone, and DNS override, since those live outside <code>config.json</code> (systemd-timesyncd, <code>timedatectl</code>, and NetworkManager keep their own state). Wi-Fi credentials are the one thing deliberately left out &mdash; NetworkManager doesn't hand back a saved password through a normal read.</p>
         <p><strong>Include SSH host key</strong> (off by default) additionally embeds the Pi's SSH private host key in the backup. With it, restoring reproduces this device exactly, including the same host-key fingerprint, so existing users don't get a "host key changed" warning after a re-flash or SD card recovery. Without it, restoring still works fine, but the Pi gets a fresh host key identity.</p>
-        <p><strong>Restore from Backup</strong> replaces the <em>entire</em> current configuration with the contents of a chosen backup file, after a confirmation prompt &mdash; there's no partial or selective restore. The page reloads automatically once it's done; a restored host key takes effect after the service is restarted. NTP/timezone/DNS are applied best-effort after everything else succeeds &mdash; if one of them fails (e.g. an unrecognized timezone name from a very old backup), you'll see exactly which one in a warning, without the rest of the restore being affected.</p>
       </div>
       <div class="callout warn">
-        <span class="mark">Handle with care</span>
+        <span class="mark">Danger Zone</span>
+        <p>Restore from Backup and Reset to Factory Default live together in a visually distinct "Danger Zone" area of this tab, separate from the routine settings above &mdash; both replace or wipe the current configuration outright.</p>
+      </div>
+      <div class="card">
+        <h4>Restore from Backup</h4>
+        <p>Replaces the <em>entire</em> current configuration with the contents of a chosen backup file, after a confirmation prompt &mdash; there's no partial or selective restore. The page reloads automatically once it's done; a restored host key takes effect after the service is restarted. NTP/timezone/DNS are applied best-effort after everything else succeeds &mdash; if one of them fails (e.g. an unrecognized timezone name from a very old backup), you'll see exactly which one in a warning, without the rest of the restore being affected.</p>
         <p>A backup file contains password hashes and SSH public keys for every account on the appliance &mdash; and, if you opted in, an SSH private key. Store it somewhere you'd trust with those credentials &mdash; and remember restoring rolls back every admin's password too, to whatever it was when that backup was taken.</p>
       </div>
       <div class="card">
         <h4>Reset to Factory Default</h4>
         <p>Wipes every serial port, console user, and admin account, and every SSH/TFTP/web/syslog setting, back to what a freshly-provisioned appliance ships with &mdash; including recreating the default admin account (<code>admin</code> / <code>letmein0!</code>) with a forced password change on next login. Deliberately scoped to just that: network settings (static IP, Wi-Fi, DNS, NTP, timezone), the SSH host key, the <a href="#tab-admin">TLS certificate</a>, and any <a href="#tab-sessions">session captures</a> are all left exactly as they were, so this can't strand you off the network the way a full wipe could.</p>
         <p>Requires typing <code>RESET</code> into the confirmation dialog before the button becomes clickable &mdash; there's no undo once it runs. The service restarts immediately afterward, dropping every active session (including whichever one triggered it) and requiring a fresh sign-in.</p>
-      </div>
-    </section>
-
-    <section id="tab-system">
-      <h3>System</h3>
-      <div class="card">
-        <h4>System Control</h4>
-        <ul>
-          <li><strong>Uptime</strong> &mdash; how long the Pi has been running, live.</li>
-          <li><strong>Hostname</strong> &mdash; the name this Pi identifies itself as on the network (letters, digits, and hyphens only, up to 63 characters). Takes effect immediately; anything already connected by IP address is unaffected.</li>
-          <li><strong>Also update the mDNS (.local) name</strong> &mdash; off by default. Changing the hostname alone does <em>not</em> change what <code>&lt;name&gt;.local</code> resolves to &mdash; the existing <code>.local</code> address keeps working on purpose, so a rename doesn't silently break bookmarks, scripts, or other devices' saved connections. Check this box to also restart <code>avahi-daemon</code> so the mDNS name catches up to match the new hostname.</li>
-          <li><strong>Reboot Now</strong> &mdash; restarts the Pi itself (not just the app). Drops every active SSH and web console session immediately; the page waits for it to come back and reloads itself automatically, the same way <a href="#tab-about">Apply Update</a> does.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h4>System Information</h4>
-        <p>A read-only snapshot for support and troubleshooting: OS release, kernel version, CPU model and core count, total memory, disk usage, the Node.js runtime version, and the running app version &mdash; everything you'd otherwise need a shell session on the Pi to look up.</p>
       </div>
     </section>
 
@@ -884,7 +885,7 @@ tftp terminalserver.local
       </div>
       <div class="card">
         <h4>Reboot and hostname changes are full-admin actions</h4>
-        <p>Any admin account can reboot the Pi or change its hostname from the <a href="#tab-system">System tab</a> &mdash; both immediately affect every user of the appliance, not just the admin who clicked. The same principle as everywhere else in this handbook applies: only grant admin accounts to people you'd trust with that.</p>
+        <p>Any admin account can reboot the Pi or change its hostname from the <a href="#tab-dashboard">Dashboard tab</a> &mdash; both immediately affect every user of the appliance, not just the admin who clicked. The same principle as everywhere else in this handbook applies: only grant admin accounts to people you'd trust with that.</p>
       </div>
       <div class="card">
         <h4>A private key never has to leave the browser's upload</h4>

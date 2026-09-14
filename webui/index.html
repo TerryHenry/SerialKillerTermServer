@@ -78,20 +78,39 @@
       <button id="logoutBtn" class="secondary">Sign Out</button>
     </div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-      <button class="tab-btn" data-tab="server">Server</button>
-      <button class="tab-btn" data-tab="system">System</button>
-      <button class="tab-btn" data-tab="network">Network</button>
-      <button class="tab-btn" data-tab="ports">Serial Ports</button>
-      <button class="tab-btn" data-tab="tftp">TFTP</button>
-      <button class="tab-btn" data-tab="users">Users</button>
-      <button class="tab-btn" data-tab="sessions">Sessions</button>
-      <button class="tab-btn" data-tab="log">Log</button>
-      <button class="tab-btn" data-tab="admin">Admin Account</button>
-      <button class="tab-btn" data-tab="about">About</button>
-    </div>
+    <div class="app-body">
+      <nav class="sidebar">
+        <div class="sidebar-main">
+          <div class="nav-group">
+            <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">Access</div>
+            <button class="tab-btn" data-tab="ports">Serial Ports</button>
+            <button class="tab-btn" data-tab="users">Users</button>
+            <button class="tab-btn" data-tab="sessions">Sessions</button>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">Network</div>
+            <button class="tab-btn" data-tab="network">Network</button>
+            <button class="tab-btn" data-tab="tftp">TFTP</button>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">Server</div>
+            <button class="tab-btn" data-tab="server">Server</button>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">Security</div>
+            <button class="tab-btn" data-tab="admin">Admin Account</button>
+            <button class="tab-btn" data-tab="log">Log</button>
+          </div>
+        </div>
+        <div class="sidebar-footer">
+          <button class="tab-btn" data-tab="about">About</button>
+        </div>
+      </nav>
 
+      <main class="tab-panel-area">
     <div class="tab-content active" id="tab-dashboard">
       <div class="panel">
         <h2>System</h2>
@@ -117,6 +136,10 @@
             <span class="stat-label">Connected Clients</span>
             <span class="stat-value" id="statClients">&mdash;</span>
           </div>
+          <div class="stat-card">
+            <span class="stat-label">Uptime</span>
+            <span class="stat-value" id="systemUptime">&mdash;</span>
+          </div>
         </div>
       </div>
       <div class="panel">
@@ -126,6 +149,49 @@
           <tbody></tbody>
         </table>
         <p class="hint" id="portStatusEmpty">No serial ports configured yet.</p>
+      </div>
+
+      <div class="panel">
+        <h2>System Control</h2>
+        <div class="field-row">
+          <label for="systemHostname">Hostname</label>
+          <input type="text" id="systemHostname" autocomplete="off" />
+          <button id="saveHostnameBtn">Save</button>
+        </div>
+        <div class="field-row">
+          <label for="systemUpdateMdns">Also update the mDNS (.local) name</label>
+          <input type="checkbox" id="systemUpdateMdns" />
+          <span class="hint">Off by default, so existing bookmarks/scripts pointing at the current <code>.local</code> address keep working even after renaming the host. Check this to make the <code>.local</code> address match the new hostname too.</span>
+        </div>
+        <div class="auth-error" id="systemControlMsg"></div>
+      </div>
+
+      <div class="panel">
+        <h2>System Information</h2>
+        <table class="data-table" id="systemInfoTable">
+          <tbody>
+            <tr><th>Operating System</th><td id="infoOsRelease">&mdash;</td></tr>
+            <tr><th>Kernel</th><td id="infoKernel">&mdash;</td></tr>
+            <tr><th>Architecture</th><td id="infoArch">&mdash;</td></tr>
+            <tr><th>CPU</th><td id="infoCpu">&mdash;</td></tr>
+            <tr><th>Total Memory</th><td id="infoMemory">&mdash;</td></tr>
+            <tr><th>Disk</th><td id="infoDisk">&mdash;</td></tr>
+            <tr><th>Node.js</th><td id="infoNode">&mdash;</td></tr>
+            <tr><th>App Version</th><td id="infoAppVersion">&mdash;</td></tr>
+          </tbody>
+        </table>
+        <button id="refreshSystemInfoBtn">Refresh</button>
+      </div>
+
+      <div class="panel danger-zone">
+        <h2>Danger Zone</h2>
+        <div class="field-row">
+          <div class="danger-zone-text">
+            <strong>Reboot Now</strong>
+            <p class="hint">Restarts the Pi itself. Drops all active SSH and web console sessions immediately and takes roughly a minute to come back.</p>
+          </div>
+          <button id="rebootBtn" class="danger">Reboot Now</button>
+        </div>
       </div>
     </div>
 
@@ -173,7 +239,7 @@
       </div>
 
       <div class="panel">
-        <h2>Backup &amp; Restore</h2>
+        <h2>Backup</h2>
         <p class="hint">Covers SSH/TFTP/web settings, serial ports, users, and admin accounts (including password hashes and public keys). Store downloaded backups somewhere secure; they contain credential data.</p>
         <div class="field-row">
           <label for="includeHostKeyOnBackup">Include SSH host key</label>
@@ -183,60 +249,26 @@
         <div class="field-row">
           <button id="downloadBackupBtn">Download Backup</button>
         </div>
+      </div>
+
+      <div class="panel danger-zone">
+        <h2>Danger Zone</h2>
         <div class="field-row">
+          <div class="danger-zone-text">
+            <strong>Restore from Backup</strong>
+            <p class="hint">Replaces the entire current configuration with the contents of a backup file.</p>
+          </div>
           <input type="file" id="restoreInput" accept="application/json" hidden />
           <button id="restoreBtn" class="danger">Restore from Backup&hellip;</button>
         </div>
         <div class="auth-error" id="restoreMsg"></div>
-      </div>
-      <div class="panel">
-        <h2>Reset to Factory Default</h2>
-        <p class="hint">Wipes all serial ports, console users, admin accounts, and SSH/TFTP/web/syslog settings back to what a freshly-provisioned appliance ships with. Network settings, the SSH host key, the TLS certificate, and session capture files are left untouched.</p>
         <div class="field-row">
+          <div class="danger-zone-text">
+            <strong>Reset to Factory Default</strong>
+            <p class="hint">Wipes all serial ports, console users, admin accounts, and SSH/TFTP/web/syslog settings back to what a freshly-provisioned appliance ships with. Network settings, the SSH host key, the TLS certificate, and session capture files are left untouched.</p>
+          </div>
           <button id="factoryResetBtn" class="danger">Reset to Factory Default&hellip;</button>
         </div>
-      </div>
-    </div>
-
-    <div class="tab-content" id="tab-system">
-      <div class="panel">
-        <h2>System Control</h2>
-        <div class="field-row">
-          <label>Uptime</label>
-          <span id="systemUptime">&mdash;</span>
-        </div>
-        <div class="field-row">
-          <label for="systemHostname">Hostname</label>
-          <input type="text" id="systemHostname" autocomplete="off" />
-          <button id="saveHostnameBtn">Save</button>
-        </div>
-        <div class="field-row">
-          <label for="systemUpdateMdns">Also update the mDNS (.local) name</label>
-          <input type="checkbox" id="systemUpdateMdns" />
-          <span class="hint">Off by default, so existing bookmarks/scripts pointing at the current <code>.local</code> address keep working even after renaming the host. Check this to make the <code>.local</code> address match the new hostname too.</span>
-        </div>
-        <div class="field-row">
-          <button id="rebootBtn" class="danger">Reboot Now</button>
-        </div>
-        <p class="hint">Rebooting drops all active SSH and web console sessions immediately and takes roughly a minute to come back.</p>
-        <div class="auth-error" id="systemControlMsg"></div>
-      </div>
-
-      <div class="panel">
-        <h2>System Information</h2>
-        <table class="data-table" id="systemInfoTable">
-          <tbody>
-            <tr><th>Operating System</th><td id="infoOsRelease">&mdash;</td></tr>
-            <tr><th>Kernel</th><td id="infoKernel">&mdash;</td></tr>
-            <tr><th>Architecture</th><td id="infoArch">&mdash;</td></tr>
-            <tr><th>CPU</th><td id="infoCpu">&mdash;</td></tr>
-            <tr><th>Total Memory</th><td id="infoMemory">&mdash;</td></tr>
-            <tr><th>Disk</th><td id="infoDisk">&mdash;</td></tr>
-            <tr><th>Node.js</th><td id="infoNode">&mdash;</td></tr>
-            <tr><th>App Version</th><td id="infoAppVersion">&mdash;</td></tr>
-          </tbody>
-        </table>
-        <button id="refreshSystemInfoBtn">Refresh</button>
       </div>
     </div>
 
@@ -620,6 +652,8 @@
         <p class="hint" id="updateProgress"></p>
         <p><a href="https://github.com/TerryHenry/SerialKillerTermServer/releases" target="_blank" rel="noopener">View all releases on GitHub</a></p>
       </div>
+    </div>
+      </main>
     </div>
   </div>
 
