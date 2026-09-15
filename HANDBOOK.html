@@ -660,6 +660,7 @@
           <li><strong>Authentication method</strong> &mdash; password, an SSH public key, or either. (Public-key auth only applies to SSH; the web console is password-only.)</li>
           <li><strong>Permission</strong> &mdash; <span class="pill ok"><span class="dot"></span>Read/write</span> or <span class="pill mute"><span class="dot"></span>Read-only</span>. Explained together with port access modes below.</li>
           <li><strong>Default port</strong> &mdash; assign one and the user is dropped straight into it on login, no menu, ever. Leave it unset and they see the port picker (if it's enabled) instead.</li>
+          <li><strong>Capture this user's sessions</strong> &mdash; records every session this user starts to a file, regardless of which port they land on or that port's own <strong>Capture sessions to file</strong> setting (Serial Ports tab). The two triggers are independent and additive: a session is captured if <em>either</em> the port or the connecting user has capture turned on.</li>
         </ul>
       </div>
       <div class="card">
@@ -675,6 +676,7 @@
               <tr><td><code>permission</code></td><td><code>read-write</code> / <code>read-only</code>. Defaults to <code>read-write</code>.</td></tr>
               <tr><td><code>defaultPort</code></td><td>Matches a port by its <strong>label</strong> (not device path). Leave blank for the port picker.</td></tr>
               <tr><td><code>publicKey</code></td><td>Required unless <code>authMethod</code> is <code>password</code>.</td></tr>
+              <tr><td><code>capture</code></td><td><code>true</code> / <code>false</code>. Turns on per-user session capture (see below). Defaults to <code>false</code>.</td></tr>
             </tbody>
           </table>
         </div>
@@ -703,7 +705,7 @@
 
       <div class="card">
         <h4>Session Captures</h4>
-        <p>A history of past sessions on any port with <strong>Capture sessions to file</strong> turned on (Serial Ports tab) &mdash; one plain-text file per session, timestamped, named for the port and username, listed here with size and last-modified time. Click a filename to download it; <strong>Delete</strong> removes it permanently, no undo.</p>
+        <p>A history of past sessions captured because <strong>either</strong> their port had <strong>Capture sessions to file</strong> turned on (Serial Ports tab) <strong>or</strong> the connecting user had <strong>Capture this user's sessions</strong> turned on (Users tab) &mdash; one plain-text file per session, timestamped, named for the port and username, listed here with size and last-modified time. Click a filename to download it; <strong>Delete</strong> removes it permanently, no undo.</p>
       </div>
 
       <div class="card">

@@ -490,7 +490,7 @@
         <h2>Users</h2>
         <p class="hint">These accounts can connect over SSH, and over the web too if the Web Console is enabled on the Server tab.</p>
         <table class="data-table" id="usersTable">
-          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th>2FA</th><th>Last Login</th><th></th></tr></thead>
+          <thead><tr><th>Username</th><th>Auth Method</th><th>Permission</th><th>Default Port</th><th>Capture</th><th>2FA</th><th>Last Login</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="field-row">
@@ -499,7 +499,7 @@
           <button id="importUsersBtn" class="secondary">Import from CSV&hellip;</button>
           <button id="downloadUserTemplateBtn" class="secondary">Download CSV Template</button>
         </div>
-        <p class="hint">CSV columns: <code>username, password, authMethod, permission, defaultPort, publicKey</code>. <code>authMethod</code> is <code>password</code>/<code>publickey</code>/<code>both</code> (guessed from which fields are filled in if left blank); <code>permission</code> is <code>read-write</code>/<code>read-only</code> (defaults to read-write); <code>defaultPort</code> matches a port's label. Only creates new accounts &mdash; a username that already exists is skipped, never overwritten.</p>
+        <p class="hint">CSV columns: <code>username, password, authMethod, permission, defaultPort, publicKey, capture</code>. <code>authMethod</code> is <code>password</code>/<code>publickey</code>/<code>both</code> (guessed from which fields are filled in if left blank); <code>permission</code> is <code>read-write</code>/<code>read-only</code> (defaults to read-write); <code>defaultPort</code> matches a port's label; <code>capture</code> is <code>yes</code>/<code>true</code>/<code>1</code> to always capture this user's sessions regardless of port (defaults to off). Only creates new accounts &mdash; a username that already exists is skipped, never overwritten.</p>
         <div class="auth-error" id="importUsersMsg"></div>
       </div>
     </div>
@@ -850,6 +850,11 @@
         <select id="userDefaultPort">
           <option value="">(none — show port menu)</option>
         </select>
+      </div>
+      <div class="field-row">
+        <label for="userCaptureEnabled">Capture this user's sessions</label>
+        <input type="checkbox" id="userCaptureEnabled" />
+        <span class="hint">Always logs their sessions to file regardless of the port's own capture setting. Off by default.</span>
       </div>
       <input type="hidden" id="userId" />
       <div class="modal-actions">

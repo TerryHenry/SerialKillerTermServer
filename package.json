@@ -19,5 +19,9 @@
   "devDependencies": {
     "@xterm/xterm": "^6.0.0",
     "qrcode-generator": "^2.0.4"
+  },
+  "allowScripts": {
+    "@serialport/bindings-cpp@12.0.1": true,
+    "ssh2@1.17.0": true
   }
 }

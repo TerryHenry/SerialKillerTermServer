@@ -1376,7 +1376,7 @@ document.getElementById('saveFleetBtn').addEventListener('click', async () => {
     const fleet = await api.post('/api/fleet', {
       mode: document.getElementById('fleetMode').value,
       hubHost: document.getElementById('fleetHubHost').value.trim(),
-      hubPort: Number(document.getElementById('fleetHubPort').value) || 2200,
+      hubPort: Number(document.getElementById('fleetHubPort').value) || 443,
       hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
       hubHostKeyFingerprint: document.getElementById('fleetHostKeyFingerprint').value.trim()
     });
@@ -1402,7 +1402,7 @@ document.getElementById('enrollFleetBtn').addEventListener('click', async () => 
   try {
     const fleet = await api.post('/api/fleet/enroll', {
       hubHost: document.getElementById('fleetHubHost').value.trim(),
-      hubPort: Number(document.getElementById('fleetHubPort').value) || 2200,
+      hubPort: Number(document.getElementById('fleetHubPort').value) || 443,
       hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
       token
     });
@@ -1432,11 +1432,15 @@ async function loadUsersTable() {
     const totpPill = u.totpEnabled
       ? '<span class="pill ok"><span class="dot"></span>On</span>'
       : '<span class="pill mute"><span class="dot"></span>Off</span>';
+    const capturePill = u.captureEnabled
+      ? '<span class="pill ok"><span class="dot"></span>On</span>'
+      : '<span class="pill mute"><span class="dot"></span>Off</span>';
     tr.innerHTML = `
       <td>${escapeHtml(u.username)}</td>
       <td>${escapeHtml(u.authMethod)}</td>
       <td>${permissionPill(u.permission)}</td>
       <td>${u.defaultPortId ? escapeHtml(portById[u.defaultPortId] || '(deleted port)') : '<span class="hint">port menu</span>'}</td>
+      <td>${capturePill}</td>
       <td>${totpPill}</td>
       <td>${formatLastLogin(u.lastLoginAt)}</td>
       <td></td>
@@ -1540,6 +1544,7 @@ async function openUserModal(user) {
   document.getElementById('userPasswordConfirm').value = '';
   document.getElementById('userPublicKey').value = user?.publicKey || '';
   document.getElementById('userPermission').value = user?.permission || 'read-write';
+  document.getElementById('userCaptureEnabled').checked = !!user?.captureEnabled;
   await refreshUserDefaultPortOptions(user?.defaultPortId);
   updateAuthMethodVisibility();
   clearFieldError('userUsername');
@@ -1554,9 +1559,9 @@ function closeUserModal() {
 
 document.getElementById('downloadUserTemplateBtn').addEventListener('click', () => {
   const template =
-    'username,password,authMethod,permission,defaultPort,publicKey\n' +
-    'alice,changeme123,password,read-write,,\n' +
-    'bob,,publickey,read-only,,"ssh-ed25519 AAAA... bob@laptop"\n';
+    'username,password,authMethod,permission,defaultPort,publicKey,capture\n' +
+    'alice,changeme123,password,read-write,,,yes\n' +
+    'bob,,publickey,read-only,,"ssh-ed25519 AAAA... bob@laptop",\n';
   const blob = new Blob([template], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1634,6 +1639,7 @@ document.getElementById('saveUserBtn').addEventListener('click', async () => {
     authMethod,
     publicKey: authMethod === 'password' ? '' : publicKey,
     permission: document.getElementById('userPermission').value,
+    captureEnabled: document.getElementById('userCaptureEnabled').checked,
     defaultPortId: document.getElementById('userDefaultPort').value || null,
     newPassword: password || undefined
   };
