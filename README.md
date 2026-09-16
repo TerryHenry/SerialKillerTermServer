@@ -52,7 +52,9 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   from My Account, or admin-managed per console user from the Users tab
   (SSH prompts for the code via keyboard-interactive right after the
   password/key check; the web console prompts the same way admin login
-  does).
+  does). The Password Policy panel can also *require* it for every admin
+  account — an admin without it set up is walked straight into enrollment
+  immediately after their next login, before reaching anything else.
 - **Bulk user import** — add a whole roster of console accounts at once
   from a CSV file (Users tab), instead of one-by-one through the form.
   Only ever creates new accounts; a username that already exists is
@@ -316,7 +318,10 @@ Updates** (so admins know a newer version exists), just without an
   it. Lost your authenticator device with no other admin account to help?
   Same recovery path as a lost admin password: edit
   `/opt/terminalserver/data/config.json` over SSH on port 22 (clear that
-  admin's `totpEnabled`/`totpSecret`) and restart the service.
+  admin's `totpEnabled`/`totpSecret`) and restart the service. If
+  `passwordPolicy.requireAdminTotp` is on, that just re-enrolls them on
+  their next login (a fresh QR to scan) rather than letting them skip 2FA
+  — the policy still applies once they're back in.
 - The breached-password list backing the password policy
   (`lib/data/common-passwords.txt`, ~10,000 entries, ~70&nbsp;KB, sourced
   from SecLists) is bundled at build time and checked entirely in-process —

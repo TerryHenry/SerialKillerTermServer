@@ -750,6 +750,7 @@
           <li><strong>Minimum length</strong> &mdash; 8 to 64 characters.</li>
           <li><strong>Require upper &amp; lowercase letters / a digit / a symbol</strong> &mdash; each off by default, independently togglable, for appliances under a policy that specifically requires them.</li>
           <li><strong>Reject common/breached passwords</strong> &mdash; on by default.</li>
+          <li><strong>Require two-factor authentication for admin accounts</strong> &mdash; off by default, and unlike everything above, admin-only: it has no bearing on console users or the Pi System Account. Once on, any admin without 2FA set up is walked straight into enrollment (scan a QR, enter the code) immediately after their next login, before reaching anything else in the API or UI &mdash; including whoever just turned the setting on, if their own account doesn't have it yet.</li>
         </ul>
         <p>Every password field on the appliance shows the current requirements right in its hint text, so nobody has to guess or trial-and-error their way to a valid one.</p>
       </div>
@@ -909,8 +910,9 @@ tftp terminalserver.local
         <p>Five failed attempts for a given username from a given address lock that pair out for five minutes &mdash; even a subsequently-correct password is rejected until the lockout clears. Basic brute-force protection, tracked in memory only, so it resets on a service restart. The same throttling applies separately to guessing a 6-digit 2FA code once a password has already checked out.</p>
       </div>
       <div class="card">
-        <h4>Turn on two-factor authentication</h4>
+        <h4>Turn on two-factor authentication -- or require it</h4>
         <p>Available for admin accounts (self-service, <a href="#tab-admin">My Account</a>) and console users (admin-managed, <a href="#tab-users">Users tab</a>) alike. Especially worth doing for anything reachable beyond your own LAN. A password alone is one guess (or one leak) away from full access; a second factor from a device the attacker doesn't have closes that gap.</p>
+        <p>Left opt-in, it's easy for an admin account to just never get around to it. <strong>Require two-factor authentication for admin accounts</strong> (<a href="#tab-admin">Admin Account &rarr; Password Policy</a>) closes that gap by making it mandatory rather than hoped-for: every admin account, present and future, is walked into enrollment before it can do anything else, the same forced-flow treatment the web login's own default password already gets.</p>
       </div>
       <div class="card">
         <h4>The password policy is a floor, not a ceiling</h4>
