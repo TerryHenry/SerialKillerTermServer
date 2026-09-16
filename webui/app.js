@@ -1363,7 +1363,7 @@ function setFleetTlsWarning(mode, fingerprint) {
     hint.textContent = 'Pinned -- heartbeat, backup, and enrollment calls will refuse to send if the hub presents a different certificate.';
   } else {
     hint.style.color = 'var(--warn)';
-    hint.textContent = 'Not pinned -- those calls trust whatever TLS certificate the hub presents. Paste the hub’s fingerprint above to close this gap.';
+    hint.textContent = 'Not pinned yet -- the first heartbeat, backup, or enrollment call will trust and automatically pin whatever certificate the hub presents. Paste it above yourself first if you\'d rather not trust that first call.';
   }
 }
 
