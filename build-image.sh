@@ -51,6 +51,23 @@ COPYFILE_DISABLE=1 tar -czf "$APP_TAR" \
 # this exactly, so a corrupted or tampered download can't be installed.
 shasum -a 256 "$APP_TAR" | awk '{print $1}' > "$APP_TAR.sha256"
 
+# The checksum above proves the download is intact, not who published it -- anyone
+# with release access could otherwise ship a tarball and a matching checksum together.
+# RELEASE_SIGNING_KEY should point at the Ed25519 PRIVATE key's PEM file (never checked
+# into this repo -- keep it in a password manager, hardware key, or offline storage,
+# and pass its path in explicitly every time rather than relying on a default location
+# an automated build could stumble onto). Deliberately non-fatal when it's not set:
+# a local test build without a real signature still works for everything except
+# self-update, which will just correctly refuse to apply it (see lib/selfUpdate.js).
+if [ -n "${RELEASE_SIGNING_KEY:-}" ]; then
+  echo "==> Signing release with $RELEASE_SIGNING_KEY..."
+  node "$SCRIPT_DIR/scripts/sign-release.js" "$APP_TAR.sha256" "$RELEASE_SIGNING_KEY" "$APP_TAR.sig"
+else
+  echo "==> WARNING: RELEASE_SIGNING_KEY not set -- this build will not include a release signature."
+  echo "    Enrolled appliances refuse to self-apply an update from an unsigned release."
+  rm -f "$APP_TAR.sig"
+fi
+
 DEVICE=""
 MOUNT_POINT=""
 
@@ -85,6 +102,11 @@ touch "$MOUNT_POINT/ssh"
 
 echo "==> Injecting first-boot provisioning..."
 cp "$APP_TAR" "$MOUNT_POINT/terminalserver-app.tar.gz"
+# Placed on the boot partition as its own file, separate from the app tarball, and
+# copied into place by firstrun.sh outside the tarball's own extraction -- see the
+# PUBLIC_KEY_PATH comment in lib/selfUpdate.js for why this can never ride along
+# inside an update package itself.
+cp "$SCRIPT_DIR/release-signing-pubkey.pem" "$MOUNT_POINT/release-signing-pubkey.pem"
 cp "$SCRIPT_DIR/provisioning/firstrun.sh" "$MOUNT_POINT/firstrun.sh"
 chmod +x "$MOUNT_POINT/firstrun.sh"
 

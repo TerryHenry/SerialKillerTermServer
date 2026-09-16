@@ -237,8 +237,8 @@ restores the backup independently of whether the app is running at all.
 
 ### Publishing a release
 
-For a release to be self-update-capable, its GitHub Release needs two
-extra assets alongside the image — `build-image.sh` generates both in
+For a release to be self-update-capable, its GitHub Release needs three
+extra assets alongside the image — `build-image.sh` generates all three in
 `build/`:
 
 - `terminalserver-app.tar.gz` — the app-only tarball (`server.js`,
@@ -246,8 +246,32 @@ extra assets alongside the image — `build-image.sh` generates both in
   no `node_modules`) that gets applied in place.
 - `terminalserver-app.tar.gz.sha256` — its checksum. The updater refuses to
   apply a download that doesn't match this exactly.
+- `terminalserver-app.tar.gz.sig` — a detached Ed25519 signature over the
+  checksum file, verified against `release-signing-pubkey.pem` (baked into
+  the image at build time, never fetched from GitHub). The checksum alone
+  only proves a download matches what GitHub is *currently* serving, not
+  who put it there — anyone with release access (or a hijacked release
+  pipeline) could otherwise publish a tarball and a matching checksum
+  together. The signature is what actually proves authorship.
 
-Releases published without these two files still show up in **Check for
+  Generate this by running `build-image.sh` with `RELEASE_SIGNING_KEY` set
+  to the path of your Ed25519 **private** key's PEM file — keep that file
+  out of this repo entirely (password manager, hardware key, offline
+  storage) and pass its path in explicitly every time:
+
+  ```
+  RELEASE_SIGNING_KEY=/path/to/release-signing-key.PRIVATE.pem ./build-image.sh
+  ```
+
+  A build without `RELEASE_SIGNING_KEY` set still works for everything
+  except self-update — enrolled appliances correctly refuse to self-apply
+  an update from a release that doesn't publish a valid signature. To
+  generate a new keypair (only ever needed once, or when deliberately
+  rotating): `node -e "const{publicKey,privateKey}=require('crypto').generateKeyPairSync('ed25519',{publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'}});console.log(publicKey,privateKey)"`
+  — commit the public half as `release-signing-pubkey.pem` at the repo
+  root, and move the private half somewhere secure immediately.
+
+Releases published without these files still show up in **Check for
 Updates** (so admins know a newer version exists), just without an
 **Apply Update** button — re-flashing is the only option for those.
 

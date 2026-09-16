@@ -779,6 +779,7 @@
         <p>When a newer release publishes an in-place update package, <strong>Check for Updates</strong> also shows an <strong>Apply Update</strong> button &mdash; a small (roughly half a megabyte) app-only download, not the multi-gigabyte full image. It patches the running install instead of re-flashing the SD card. Confirming it:</p>
         <ol class="steps">
           <li>Downloads the new version and verifies its checksum against the one published alongside it &mdash; a corrupted or tampered download is refused outright, before anything on the Pi is touched.</li>
+          <li>Verifies a detached signature over that checksum against a public key baked into this Pi's image at build time (never fetched from GitHub) &mdash; the checksum alone only proves the download matches what GitHub is <em>currently</em> serving, not who published it; the signature is what actually proves it came from a trusted release, refusing an unsigned or wrongly-signed one outright.</li>
           <li>Extracts it to a staging area and syntax-checks every file, then installs its dependencies there &mdash; still without touching the live app.</li>
           <li>Only once all of that passes: backs up the current version, swaps the new one in, and restarts the service.</li>
         </ol>
@@ -892,6 +893,10 @@ tftp terminalserver.local
         <p>The underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) has its password expired the moment it's created, the same way the web UI forces a change on first login &mdash; a console or SSH login has to set a real password before it gets a shell, so the published default can't just be left in place unnoticed. Change it proactively from <strong>Admin Account &rarr; Pi System Account</strong> in the web UI instead, if you'd rather not wait to be prompted &mdash; either path changes the same account and clears the forced state.</p>
       </div>
       <div class="card">
+        <h4>Updates are verified by signature, not just checksum</h4>
+        <p>A checksum published in the same release as the tarball only proves the download matches what GitHub is currently serving &mdash; it says nothing about who published it, so anyone with release access (or a compromised release pipeline) could otherwise ship a tarball and a matching checksum together and have every enrolled box apply it with root-level trust. <strong>Apply Update</strong> instead verifies a detached signature against a public key baked into this Pi's image at build time (<code>/opt/terminalserver/release-signing-pubkey.pem</code>, placed there once by <code>firstrun.sh</code> and never touched by anything an update package can rewrite) &mdash; a release without a valid signature is refused outright, and never even shows an Apply Update button.</p>
+      </div>
+      <div class="card">
         <h4>The web UI's certificate is self-signed</h4>
         <p>Generated locally on first boot, fine for a trusted LAN. If you're exposing the admin UI beyond one, put it behind a reverse proxy or VPN, or swap in your own certificate at <code>/opt/terminalserver/data/tls/</code> on the Pi.</p>
       </div>
@@ -987,7 +992,7 @@ tftp terminalserver.local
             </tr>
             <tr>
               <td>No <strong>Apply Update</strong> button even though a newer version exists</td>
-              <td>That release doesn't publish an in-place update package (common for releases from before this feature existed). Re-flash the SD card with the new image instead.</td>
+              <td>That release doesn't publish a complete, signed in-place update package (common for releases from before this feature existed, or a release published without a valid signature). Re-flash the SD card with the new image instead.</td>
             </tr>
             <tr>
               <td>Page never comes back after clicking <strong>Apply Update</strong></td>

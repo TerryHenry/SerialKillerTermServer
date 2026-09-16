@@ -24,6 +24,16 @@ mkdir -p "$APP_DIR"
 echo "Extracting application files..."
 tar -xzf "$BOOTDIR/terminalserver-app.tar.gz" -C "$APP_DIR"
 
+# Copied from the boot partition, deliberately separate from the tarball extraction
+# above -- this is the self-updater's trust anchor (lib/selfUpdate.js's
+# PUBLIC_KEY_PATH), and it must land here exactly once, outside anything a future
+# update package could ever touch. See that file's comment for why.
+if [ -f "$BOOTDIR/release-signing-pubkey.pem" ]; then
+  cp "$BOOTDIR/release-signing-pubkey.pem" "$APP_DIR/release-signing-pubkey.pem"
+else
+  echo "WARNING: no release-signing-pubkey.pem found on the boot partition -- this box will not be able to self-apply updates until one is placed at $APP_DIR/release-signing-pubkey.pem" >&2
+fi
+
 echo "Installing systemd units..."
 install -m 644 "$APP_DIR/provisioning/terminalserver.service" /etc/systemd/system/terminalserver.service
 install -m 644 "$APP_DIR/provisioning/terminalserver-setup.service" /etc/systemd/system/terminalserver-setup.service
