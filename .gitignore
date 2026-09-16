@@ -3,3 +3,4 @@ build/
 /data/
 .DS_Store
 *.log
+*.tar.gz
