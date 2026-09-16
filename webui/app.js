@@ -1348,7 +1348,7 @@ function setFleetHostKeyWarning(mode, fingerprint) {
     hint.textContent = 'Pinned -- the tunnel will refuse to connect if the hub presents a different key.';
   } else {
     hint.style.color = 'var(--warn)';
-    hint.textContent = 'Not pinned -- the tunnel trusts whatever host key the hub presents. Paste the hub’s key above to close this gap.';
+    hint.textContent = 'Not pinned yet -- the first connection will trust and automatically pin whatever host key the hub presents. Paste it above yourself first if you\'d rather not trust that first connection.';
   }
 }
 
