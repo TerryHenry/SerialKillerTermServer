@@ -46,6 +46,15 @@ else
   echo "$DEFAULT_OS_USER:$DEFAULT_OS_PASSWORD" | chpasswd
   systemctl disable userconfig.service 2>/dev/null || true
 fi
+# Unlike the web UI's admin login, a sudo-capable OS account with a password this
+# project publishes in its own README can't just start out "changed eventually" --
+# expiring it immediately means the very first login (console or SSH on port 22)
+# forces a real password before a shell is granted, same effect as the web login's
+# mustChangePassword. A later password change, from either the web UI's Pi System
+# Account panel (which calls chpasswd) or `passwd` over SSH, naturally clears this by
+# updating the same last-changed date chage reads, so it's a one-time gate, not a
+# recurring nag.
+passwd -e "$DEFAULT_OS_USER"
 
 echo "Setting hostname..."
 CURRENT_HOSTNAME=$(cat /etc/hostname 2>/dev/null | tr -d '[:space:]')

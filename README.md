@@ -167,10 +167,13 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   the Pi itself, under a default Linux account (`admin` / `letmein0!`,
   same credentials as the web UI's default login) created during first boot
   so Raspberry Pi OS's own mandatory first-run account-creation prompt
-  (`userconfig.service`) doesn't block on the physical console. Change its
-  password from Admin Account → Pi System Account in the web UI, or with
-  `passwd` once logged in over SSH — unlike the web UI's admin password,
-  this one isn't force-rotated for you.
+  (`userconfig.service`) doesn't block on the physical console. Its
+  password is expired immediately (`passwd -e`), so the first console or
+  SSH login is forced to set a real one before getting a shell — the same
+  effect as the web UI's forced first-login change, just enforced by the
+  OS instead of the app. Change it proactively from Admin Account → Pi
+  System Account in the web UI, or with `passwd` once logged in over SSH,
+  if you'd rather not wait to be prompted.
 
 
 Images:

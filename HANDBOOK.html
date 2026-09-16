@@ -478,7 +478,7 @@
               <td><strong>Pi's own Linux login</strong></td>
               <td>Shell/SSH access to the Pi itself on port 22, for OS-level maintenance</td>
               <td><code>passwd</code>, at the Linux shell</td>
-              <td><code>admin</code> / <code>letmein0!</code> &mdash; <em>not</em> force-rotated</td>
+              <td><code>admin</code> / <code>letmein0!</code> &mdash; expired at first boot, so the first login forces a real one</td>
             </tr>
           </tbody>
         </table>
@@ -724,7 +724,7 @@
       </div>
       <div class="card">
         <h4>Pi System Account</h4>
-        <p>Changes the password for the underlying Linux <code>admin</code> account (SSH on port 22, normal shell access to the Pi itself) &mdash; a completely different account from this web login and from the console users on the <a href="#tab-users">Users tab</a>. Unlike this web login's password, it isn't force-rotated for you, so it's worth changing from the default at some point.</p>
+        <p>Changes the password for the underlying Linux <code>admin</code> account (SSH on port 22, normal shell access to the Pi itself) &mdash; a completely different account from this web login and from the console users on the <a href="#tab-users">Users tab</a>. Its default password is expired from first boot, so a shell login (console or SSH) forces a new one before it grants access even if you never visit this panel; changing it here works just as well and clears that forced state the same way.</p>
       </div>
       <div class="card">
         <h4>Two-Factor Authentication</h4>
@@ -888,8 +888,8 @@ tftp terminalserver.local
     <section id="security">
       <h2>Security notes</h2>
       <div class="card">
-        <h4>Change the Linux account password too</h4>
-        <p>The web UI forces a password change on first login; the underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) does not. Change it from <strong>Admin Account &rarr; Pi System Account</strong> in the web UI, or run <code>passwd</code> after logging in over SSH on port 22 &mdash; either works, they're changing the same account.</p>
+        <h4>The Linux account password is expired, same as the web login</h4>
+        <p>The underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) has its password expired the moment it's created, the same way the web UI forces a change on first login &mdash; a console or SSH login has to set a real password before it gets a shell, so the published default can't just be left in place unnoticed. Change it proactively from <strong>Admin Account &rarr; Pi System Account</strong> in the web UI instead, if you'd rather not wait to be prompted &mdash; either path changes the same account and clears the forced state.</p>
       </div>
       <div class="card">
         <h4>The web UI's certificate is self-signed</h4>
