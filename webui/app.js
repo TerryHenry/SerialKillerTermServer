@@ -1352,6 +1352,21 @@ function setFleetHostKeyWarning(mode, fingerprint) {
   }
 }
 
+function setFleetTlsWarning(mode, fingerprint) {
+  const hint = document.getElementById('fleetTlsHint');
+  if (mode !== 'managed') {
+    hint.textContent = '';
+    return;
+  }
+  if (fingerprint) {
+    hint.style.color = 'var(--ok)';
+    hint.textContent = 'Pinned -- heartbeat, backup, and enrollment calls will refuse to send if the hub presents a different certificate.';
+  } else {
+    hint.style.color = 'var(--warn)';
+    hint.textContent = 'Not pinned -- those calls trust whatever TLS certificate the hub presents. Paste the hub’s fingerprint above to close this gap.';
+  }
+}
+
 async function loadFleetSettings() {
   const fleet = await api.get('/api/fleet');
   document.getElementById('fleetMode').value = fleet.mode;
@@ -1359,9 +1374,11 @@ async function loadFleetSettings() {
   document.getElementById('fleetHubPort').value = fleet.hubPort;
   document.getElementById('fleetHubApiPort').value = fleet.hubApiPort;
   document.getElementById('fleetHostKeyFingerprint').value = fleet.hubHostKeyFingerprint || '';
+  document.getElementById('fleetTlsFingerprint').value = fleet.hubTlsFingerprint || '';
   document.getElementById('fleetPublicKey').textContent = fleet.publicKey || '(unavailable)';
   setFleetStatus(fleet.connected, fleet.mode);
   setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
+  setFleetTlsWarning(fleet.mode, fleet.hubTlsFingerprint);
 }
 
 /** Applied after Save/Enroll when the "disable local console" box is checked and the
@@ -1384,11 +1401,13 @@ document.getElementById('saveFleetBtn').addEventListener('click', async () => {
       hubHost: document.getElementById('fleetHubHost').value.trim(),
       hubPort: Number(document.getElementById('fleetHubPort').value) || 443,
       hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
-      hubHostKeyFingerprint: document.getElementById('fleetHostKeyFingerprint').value.trim()
+      hubHostKeyFingerprint: document.getElementById('fleetHostKeyFingerprint').value.trim(),
+      hubTlsFingerprint: document.getElementById('fleetTlsFingerprint').value.trim()
     });
     await applyLocalConsoleLockdown(fleet.mode);
     setFleetStatus(fleet.connected, fleet.mode);
     setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
+    setFleetTlsWarning(fleet.mode, fleet.hubTlsFingerprint);
     msg.style.color = 'var(--ok)';
     msg.textContent = 'Saved.';
   } catch (err) {
@@ -1416,6 +1435,7 @@ document.getElementById('enrollFleetBtn').addEventListener('click', async () => 
     document.getElementById('fleetMode').value = fleet.mode;
     setFleetStatus(fleet.connected, fleet.mode);
     setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
+    setFleetTlsWarning(fleet.mode, fleet.hubTlsFingerprint);
     document.getElementById('fleetEnrollToken').value = '';
     msg.style.color = 'var(--ok)';
     msg.textContent = `Enrolled as "${fleet.siteName}".`;
