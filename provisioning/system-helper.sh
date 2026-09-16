@@ -122,6 +122,18 @@ case "${1:-}" in
       exit 1
     fi
     hostnamectl set-hostname "$hostname"
+    # hostnamectl only changes the kernel/system hostname -- it never touches
+    # /etc/hosts, so the conventional "127.0.1.1 <hostname>" line there silently keeps
+    # naming the OLD hostname. The moment the two diverge, anything that resolves the
+    # local hostname for itself (sudo included, for its own logging) starts failing
+    # with "unable to resolve host <name>: Name or service not known" -- found live,
+    # not by inspection, on a renamed appliance. Update that line to match, or add it
+    # fresh if this image never had one.
+    if grep -q '^127\.0\.1\.1[[:space:]]' /etc/hosts; then
+      sed -i "s/^127\.0\.1\.1[[:space:]].*/127.0.1.1\t$hostname/" /etc/hosts
+    else
+      printf '127.0.1.1\t%s\n' "$hostname" >> /etc/hosts
+    fi
     # Opt-in: avahi-daemon doesn't necessarily re-advertise under the new name on its
     # own, so the "<oldname>.local" mDNS address can keep working (or stop working)
     # independently of the Linux hostname change above until it's restarted. Only do
