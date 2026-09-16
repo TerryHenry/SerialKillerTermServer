@@ -341,3 +341,7 @@ Updates** (so admins know a newer version exists), just without an
   effort given how much routing/middleware behavior a major version bump
   touches. Everything else (including the `multer` DoS advisories) is
   patched.
+
+## License
+
+[MIT](LICENSE)
