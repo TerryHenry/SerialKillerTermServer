@@ -249,7 +249,10 @@
           <label for="fleetHubPort">Tunnel port</label>
           <input type="number" id="fleetHubPort" min="1" max="65535" style="width: 6em" />
           <label for="fleetHubApiPort">API port</label>
-          <input type="number" id="fleetHubApiPort" min="1" max="65535" style="width: 6em" />
+          <input type="number" id="fleetHubApiPort" min="1" max="65535" style="width: 6em" placeholder="optional" />
+        </div>
+        <div class="field-row">
+          <span class="hint">Enrolling, heartbeating, and pushing config backups all prefer riding over the tunnel port above whenever it's connected. The API port is only ever used as a fallback for when it isn't (including the very first heartbeat, before the tunnel finishes connecting) &mdash; leave it blank if this box should rely on the tunnel alone, with no second address to fall back to.</span>
         </div>
         <div class="field-row">
           <label for="fleetDisableLocalConsole">Disable local SSH &amp; web console</label>

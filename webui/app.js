@@ -1420,7 +1420,7 @@ async function loadFleetSettings() {
   document.getElementById('fleetMode').value = fleet.mode;
   document.getElementById('fleetHubHost').value = fleet.hubHost;
   document.getElementById('fleetHubPort').value = fleet.hubPort;
-  document.getElementById('fleetHubApiPort').value = fleet.hubApiPort;
+  document.getElementById('fleetHubApiPort').value = fleet.hubApiPort ?? '';
   document.getElementById('fleetHostKeyFingerprint').value = fleet.hubHostKeyFingerprint || '';
   document.getElementById('fleetTlsFingerprint').value = fleet.hubTlsFingerprint || '';
   document.getElementById('fleetPublicKey').textContent = fleet.publicKey || '(unavailable)';
@@ -1448,7 +1448,11 @@ document.getElementById('saveFleetBtn').addEventListener('click', async () => {
       mode: document.getElementById('fleetMode').value,
       hubHost: document.getElementById('fleetHubHost').value.trim(),
       hubPort: Number(document.getElementById('fleetHubPort').value) || 443,
-      hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
+      // Blank means "no fallback API port for this box" -- left as the raw (possibly
+      // empty) string rather than defaulting to 8443, so the server can tell "admin left
+      // it blank on purpose" apart from "admin typed 8443". See parseOptionalPort in
+      // webServer.js.
+      hubApiPort: document.getElementById('fleetHubApiPort').value.trim(),
       hubHostKeyFingerprint: document.getElementById('fleetHostKeyFingerprint').value.trim(),
       hubTlsFingerprint: document.getElementById('fleetTlsFingerprint').value.trim()
     });
@@ -1476,7 +1480,7 @@ document.getElementById('enrollFleetBtn').addEventListener('click', async () => 
     const fleet = await api.post('/api/fleet/enroll', {
       hubHost: document.getElementById('fleetHubHost').value.trim(),
       hubPort: Number(document.getElementById('fleetHubPort').value) || 443,
-      hubApiPort: Number(document.getElementById('fleetHubApiPort').value) || 8443,
+      hubApiPort: document.getElementById('fleetHubApiPort').value.trim(),
       token
     });
     await applyLocalConsoleLockdown(fleet.mode);
