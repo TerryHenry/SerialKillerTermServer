@@ -1,19 +1,25 @@
 'use strict';
 
-// Populated from every /api/session response (see boot() and the status poll below) and
-// echoed back on every mutating request -- the server compares it against the same
-// value it handed out for this session, so a cross-site request (which never sees this
-// response) has no way to produce it, on top of whatever SameSite already blocks.
+// Populated from every response that carries one -- /api/session always does, and so
+// does every login-ish endpoint that regenerates the session server-side (setup, login,
+// login-totp), since that wipes whatever token the session had a moment before. Echoed
+// back on every mutating request -- the server compares it against the same value it
+// handed out for this session, so a cross-site request (which never sees this response)
+// has no way to produce it, on top of whatever SameSite already blocks.
 let csrfToken = null;
 function csrfHeaders() {
   return csrfToken ? { 'X-CSRF-Token': csrfToken } : {};
+}
+function captureCsrfToken(body) {
+  if (body && typeof body.csrfToken === 'string') csrfToken = body.csrfToken;
+  return body;
 }
 
 const api = {
   async get(url) {
     const res = await fetch(url);
     if (!res.ok) throw await apiError(res);
-    return res.json();
+    return captureCsrfToken(await res.json());
   },
   async post(url, body) {
     const res = await fetch(url, {
@@ -22,12 +28,12 @@ const api = {
       body: JSON.stringify(body || {})
     });
     if (!res.ok) throw await apiError(res);
-    return res.json();
+    return captureCsrfToken(await res.json());
   },
   async del(url) {
     const res = await fetch(url, { method: 'DELETE', headers: csrfHeaders() });
     if (!res.ok) throw await apiError(res);
-    return res.json();
+    return captureCsrfToken(await res.json());
   }
 };
 
@@ -129,7 +135,6 @@ document.getElementById('savePasswordPolicyBtn').addEventListener('click', async
 async function boot() {
   await loadPasswordPolicy();
   const session = await api.get('/api/session');
-  csrfToken = session.csrfToken;
   if (session.needsSetup) {
     show(setupScreen);
     document.body.classList.remove('app-mode');
@@ -188,9 +193,7 @@ document.getElementById('setupForm').addEventListener('submit', async (e) => {
       password: document.getElementById('setupPassword').value
     });
     hide(setupScreen);
-    document.body.classList.add('app-mode');
-    show(appRoot);
-    await initApp();
+    await boot();
   } catch (err) {
     errorEl.textContent = err.message;
   }
@@ -818,7 +821,6 @@ function setTotpStatusUi(enabled) {
 
 async function loadTotpStatus() {
   const session = await api.get('/api/session');
-  csrfToken = session.csrfToken;
   setTotpStatusUi(!!session.totpEnabled);
 }
 

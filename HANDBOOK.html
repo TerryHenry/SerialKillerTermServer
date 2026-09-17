@@ -890,6 +890,14 @@ tftp terminalserver.local
     <section id="security">
       <h2>Security notes</h2>
       <div class="card">
+        <h4>Logging in issues a brand-new session</h4>
+        <p>The session cookie a browser holds before signing in is never the same one it holds afterward -- every successful login (password, 2FA, first-run setup, and the separate web-console login) throws away whatever session existed and issues a fresh one. This closes session fixation: without it, a session id an attacker controlled <em>before</em> you logged in would still be the exact same id that's fully authenticated <em>after</em> you log in, if they'd ever gotten it into your browser by any means. With it, whatever they had access to before stops being useful the moment you actually sign in.</p>
+      </div>
+      <div class="card">
+        <h4>The web console's connection checks its origin</h4>
+        <p>SameSite cookie protection (see below) covers ordinary form-style requests, but not a WebSocket handshake, which is technically a GET a browser will still carry cross-site cookies on. The web console's connection (<code>/ws/terminal</code>) separately checks that the page opening it is this same appliance's own admin UI, not some other site running in a background tab -- otherwise a malicious page could open a live console session using your browser's own login, with no code you'd ever see.</p>
+      </div>
+      <div class="card">
         <h4>The Linux account password is expired, same as the web login</h4>
         <p>The underlying Raspberry Pi OS account (port 22, <code>admin</code> / <code>letmein0!</code>) has its password expired the moment it's created, the same way the web UI forces a change on first login &mdash; a console or SSH login has to set a real password before it gets a shell, so the published default can't just be left in place unnoticed. Change it proactively from <strong>Admin Account &rarr; Pi System Account</strong> in the web UI instead, if you'd rather not wait to be prompted &mdash; either path changes the same account and clears the forced state.</p>
       </div>
@@ -900,6 +908,10 @@ tftp terminalserver.local
       <div class="card">
         <h4>Every state-changing request needs a matching CSRF token</h4>
         <p>The session cookie is already <code>SameSite=Lax</code>, which stops a cross-site form or script from riding along on it for anything but a plain top-level link click &mdash; but that's a browser behavior this box doesn't itself verify. On top of it, every login, save, upload, or delete has to echo back a per-session token it can only have gotten from a real, already-authenticated response, which a cross-site request never sees. A request missing or mismatching that token is refused outright (<code>invalid_csrf_token</code>) before anything it asked for happens.</p>
+      </div>
+      <div class="card">
+        <h4>Standard hardening response headers, and rate-limited first-run setup</h4>
+        <p>Every response carries <code>X-Frame-Options: SAMEORIGIN</code> (blocks another site from framing this admin UI inside an invisible overlay to trick you into clicking something), <code>X-Content-Type-Options: nosniff</code>, a strict <code>Referrer-Policy</code>, and HSTS. None of it is configurable, since there's no legitimate reason to turn any of it off. Separately, the very first admin account creation (before this box has one at all) is throttled the same way a login is &mdash; five bad attempts from one address locks it out for a few minutes, so a script can't just hammer that window with garbage input.</p>
       </div>
       <div class="card">
         <h4>The web UI's certificate is self-signed</h4>

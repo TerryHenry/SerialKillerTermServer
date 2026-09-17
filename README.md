@@ -279,6 +279,15 @@ Updates** (so admins know a newer version exists), just without an
 
 ## Notes / limitations
 
+- Session/request hardening: every login (admin, 2FA-completed, first-run
+  setup, and the separate web-console login) regenerates the session id,
+  closing session fixation. Every state-changing request needs a per-session
+  CSRF token echoed back in a header, on top of `SameSite=Lax`. The web
+  console's own WebSocket connection separately checks its `Origin`, since
+  `SameSite` doesn't cover a WS handshake the way it covers a form POST.
+  Responses carry `X-Frame-Options`, `X-Content-Type-Options`,
+  `Referrer-Policy`, and HSTS. First-run admin setup is rate-limited the
+  same way login is.
 - The admin web UI's TLS certificate is self-signed and generated locally on
   first boot (`lib/tlsCert.js`, via `openssl`) — fine for a trusted LAN, but
   browsers will show a warning until you either accept it or swap in your

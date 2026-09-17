@@ -16,6 +16,14 @@ function showScreen(el) {
 // CSRF-protection middleware -- see that file's csrfToken comment for the full story.
 let csrfToken = null;
 
+// Auto-captured from any response that carries one -- login/login-totp regenerate the
+// session server-side (closing a session-fixation gap), which wipes whatever token the
+// session had a moment before, so the fresh one has to come back from that same response.
+function captureCsrfToken(data) {
+  if (data && typeof data.csrfToken === 'string') csrfToken = data.csrfToken;
+  return data;
+}
+
 async function apiPost(url, body) {
   const res = await fetch(url, {
     method: 'POST',
@@ -24,14 +32,14 @@ async function apiPost(url, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-  return data;
+  return captureCsrfToken(data);
 }
 
 async function apiGet(url) {
   const res = await fetch(url);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-  return data;
+  return captureCsrfToken(data);
 }
 
 async function afterLogin(result) {
@@ -166,7 +174,6 @@ document.getElementById('terminalDisconnectBtn').addEventListener('click', async
 (async () => {
   try {
     const session = await apiGet('/api/terminal/session');
-    csrfToken = session.csrfToken;
     if (!session.enabled) {
       showScreen(disabledScreen);
       return;
