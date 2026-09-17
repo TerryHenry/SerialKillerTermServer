@@ -898,6 +898,10 @@ tftp terminalserver.local
         <p>A checksum published in the same release as the tarball only proves the download matches what GitHub is currently serving &mdash; it says nothing about who published it, so anyone with release access (or a compromised release pipeline) could otherwise ship a tarball and a matching checksum together and have every enrolled box apply it with root-level trust. <strong>Apply Update</strong> instead verifies a detached signature against a public key baked into this Pi's image at build time (<code>/opt/terminalserver/release-signing-pubkey.pem</code>, placed there once by <code>firstrun.sh</code> and never touched by anything an update package can rewrite) &mdash; a release without a valid signature is refused outright, and never even shows an Apply Update button.</p>
       </div>
       <div class="card">
+        <h4>Every state-changing request needs a matching CSRF token</h4>
+        <p>The session cookie is already <code>SameSite=Lax</code>, which stops a cross-site form or script from riding along on it for anything but a plain top-level link click &mdash; but that's a browser behavior this box doesn't itself verify. On top of it, every login, save, upload, or delete has to echo back a per-session token it can only have gotten from a real, already-authenticated response, which a cross-site request never sees. A request missing or mismatching that token is refused outright (<code>invalid_csrf_token</code>) before anything it asked for happens.</p>
+      </div>
+      <div class="card">
         <h4>The web UI's certificate is self-signed</h4>
         <p>Generated locally on first boot, fine for a trusted LAN. If you're exposing the admin UI beyond one, put it behind a reverse proxy or VPN, or swap in your own certificate at <code>/opt/terminalserver/data/tls/</code> on the Pi.</p>
       </div>

@@ -11,10 +11,15 @@ function showScreen(el) {
   el.classList.add('active');
 }
 
+// This page is a separate script from webui/app.js (it's served on its own route, not
+// as part of the admin SPA) but shares the same session cookie and the same
+// CSRF-protection middleware -- see that file's csrfToken comment for the full story.
+let csrfToken = null;
+
 async function apiPost(url, body) {
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) },
     body: JSON.stringify(body || {})
   });
   const data = await res.json().catch(() => ({}));
@@ -161,6 +166,7 @@ document.getElementById('terminalDisconnectBtn').addEventListener('click', async
 (async () => {
   try {
     const session = await apiGet('/api/terminal/session');
+    csrfToken = session.csrfToken;
     if (!session.enabled) {
       showScreen(disabledScreen);
       return;
