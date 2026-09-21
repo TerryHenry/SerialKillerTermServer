@@ -183,11 +183,7 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   modes as any session: a port a user has open (exclusive) fails with that reason, and a
   read-only port is refused. Each port gets a record of per-step status, the device's
   output and any failure reason; batches can be cancelled, scripts saved as templates, and
-  the last 50 batches are kept. (The Central Office hub has the same feature across sites.)- **Hub forwarding** — the Central Office panel has an **Allow hub forwarding** switch
-  (on by default). With it on, a Central Office admin can reach a device on this box's
-  network (a switch's web page, an SSH login) through the tunnel using a hub-side
-  "Forward". The box only ever connects to the named device on its own network -- never to
-  itself (loopback is refused) -- and refuses everything when the switch is off.- **Admin idle timeout** — admins are signed out after a period with no mouse or
+  the last 50 batches are kept. (The Central Office hub has the same feature across sites.)- **Admin idle timeout** — admins are signed out after a period with no mouse or
   keyboard activity (Admin Account tab; default 5 minutes, 0 disables it), enforced by
   the server as well as the browser.
 - **Configurable dashboard** — hide, show and reorder the Dashboard's widgets (System,

@@ -1523,7 +1523,6 @@ async function loadFleetSettings() {
   document.getElementById('fleetHubHost').value = fleet.hubHost;
   document.getElementById('fleetHubPort').value = fleet.hubPort;
   document.getElementById('fleetHubApiPort').value = fleet.hubApiPort ?? '';
-  document.getElementById('fleetAllowForwarding').checked = fleet.allowForwarding !== false;
   document.getElementById('fleetHostKeyFingerprint').value = fleet.hubHostKeyFingerprint || '';
   document.getElementById('fleetTlsFingerprint').value = fleet.hubTlsFingerprint || '';
   document.getElementById('fleetPublicKey').textContent = fleet.publicKey || '(unavailable)';
@@ -1557,8 +1556,7 @@ document.getElementById('saveFleetBtn').addEventListener('click', async () => {
       // webServer.js.
       hubApiPort: document.getElementById('fleetHubApiPort').value.trim(),
       hubHostKeyFingerprint: document.getElementById('fleetHostKeyFingerprint').value.trim(),
-      hubTlsFingerprint: document.getElementById('fleetTlsFingerprint').value.trim(),
-      allowForwarding: document.getElementById('fleetAllowForwarding').checked
+      hubTlsFingerprint: document.getElementById('fleetTlsFingerprint').value.trim()
     });
     await applyLocalConsoleLockdown(fleet.mode);
     setFleetStatus(fleet.connected, fleet.mode);
