@@ -171,7 +171,17 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   LLDP is on by default; CDP (Cisco) and FDP (Foundry/Brocade) listening are
   optional switches on the same panel. A managed box's hub can also read its
   neighbors and change these settings remotely.
-- **Hub-managed users** — when this box is managed by a Central Office hub,
+- **Baud auto-detect** — in the Add/Edit Serial Port dialog, **Auto-detect** listens at
+  each common speed (8N1, then 7E1) after sending a carriage return and fills in the
+  first one that returns readable text. It refuses a port that has a live session, and
+  only opens devices this box actually reports.
+- **Admin idle timeout** — admins are signed out after a period with no mouse or
+  keyboard activity (Admin Account tab; default 5 minutes, 0 disables it), enforced by
+  the server as well as the browser.
+- **Configurable dashboard** — hide, show and reorder the Dashboard's widgets (System,
+  Serial Ports, System Information, Active Sessions, Recent Activity) with
+  **Customize**; the layout is remembered in that browser.
+- The SSH port menu no longer shows device paths, only each port's label and baud rate.- **Hub-managed users** — when this box is managed by a Central Office hub,
   the hub can push console users to it (Sync Users / "Push to edge sites").
   Those logins are password-only and replaced wholesale on each sync;
   accounts created locally here are never touched, and a local account wins

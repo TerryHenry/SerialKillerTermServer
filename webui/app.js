@@ -38,6 +38,9 @@ const api = {
 };
 
 async function apiError(res) {
+  // A 401 while the app is showing means the session ended (idle timeout, restart) --
+  // go back to the login screen instead of leaving a dead UI.
+  if (res.status === 401 && document.getElementById('appRoot').classList.contains('active')) window.location.reload();
   try {
     const body = await res.json();
     return new Error(body.error || `HTTP ${res.status}`);
@@ -160,6 +163,8 @@ async function boot() {
     document.body.classList.remove('app-mode');
     return;
   }
+  // Logged in: make sure no auth screen (login is visible by default) lingers over the app.
+  document.querySelectorAll('.auth-screen').forEach(hide);
   document.body.classList.add('app-mode');
   show(appRoot);
   await initApp();
@@ -548,7 +553,7 @@ function applyLldpStatus(data) {
   document.getElementById('lldpStatusText').textContent = !data.installed ? 'lldpd not installed' : data.active ? 'Running' : 'Stopped';
   const msg = document.getElementById('lldpMsg');
   msg.style.color = 'var(--danger)';
-  msg.textContent = !data.installed ? 'lldpd is not installed on this host (sudo apt-get install lldpd).' : data.neighborsError || '';
+  msg.textContent = !data.installed ? 'lldpd is not installed on this host. It is installed automatically at startup (needs internet); by hand: sudo apt-get install lldpd' : data.neighborsError || '';
   const neighbors = data.neighbors || [];
   renderLldpNeighborRows(document.querySelector('#lldpNeighborsTable tbody'), neighbors);
   const empty = document.getElementById('lldpNeighborsEmpty');
@@ -1333,6 +1338,7 @@ function openPortModal(port) {
   editingPortPath = port?.path || null;
   clearFieldError('portLabel');
   clearFieldError('portPath');
+  document.getElementById('detectBaudMsg').textContent = '';
   refreshSystemPortsDatalist();
   document.getElementById('portModalBackdrop').classList.add('open');
 }
@@ -1341,6 +1347,38 @@ function closePortModal() {
   document.getElementById('portModalBackdrop').classList.remove('open');
 }
 
+document.getElementById('detectBaudBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('detectBaudMsg');
+  const devPath = document.getElementById('portPath').value.trim();
+  if (!devPath) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Choose a device path first.';
+    return;
+  }
+  const btn = document.getElementById('detectBaudBtn');
+  btn.disabled = true;
+  msg.style.color = '';
+  msg.textContent = 'Listening at each common speed (a few seconds)…';
+  try {
+    const r = await api.post('/api/ports/detect-baud', { path: devPath });
+    if (r.baudRate) {
+      document.getElementById('portBaud').value = String(r.baudRate);
+      document.getElementById('portDataBits').value = String(r.dataBits);
+      document.getElementById('portStopBits').value = String(r.stopBits);
+      document.getElementById('portParity').value = r.parity;
+      msg.style.color = 'var(--ok)';
+      msg.textContent = `Detected ${r.baudRate} ${r.framing}. Saw: ${r.sample.trim() || '(blank)'}`;
+    } else {
+      msg.style.color = 'var(--danger)';
+      msg.textContent = r.reason;
+    }
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
 document.getElementById('addPortBtn').addEventListener('click', () => openPortModal(null));
 
 document.getElementById('toggleDevicePathsBtn').addEventListener('click', async (e) => {
@@ -2197,3 +2235,77 @@ async function initApp() {
 }
 
 boot();
+
+// ---------- Admin idle auto-logout ----------
+// The server enforces the timeout too (a session with no real activity is rejected), so
+// this is what makes the browser actually return to the login screen promptly.
+(function idleAutoLogout() {
+  let limitMs = 0;
+  let loaded = false;
+  let lastActivity = Date.now();
+  let lastTouch = 0;
+
+  function applyLimit(minutes) {
+    limitMs = minutes > 0 ? minutes * 60 * 1000 : 0;
+    const input = document.getElementById('idleTimeoutMinutes');
+    if (input && document.activeElement !== input) input.value = minutes;
+  }
+
+  for (const ev of ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel']) {
+    window.addEventListener(
+      ev,
+      () => {
+        lastActivity = Date.now();
+        if (limitMs && lastActivity - lastTouch > 30000 && appRoot.classList.contains('active')) {
+          lastTouch = lastActivity;
+          api.post('/api/session/touch').catch(() => {});
+        }
+      },
+      { passive: true }
+    );
+  }
+
+  setInterval(async () => {
+    if (!appRoot.classList.contains('active')) {
+      loaded = false;
+      limitMs = 0;
+      return;
+    }
+    if (!loaded) {
+      loaded = true;
+      lastActivity = Date.now();
+      try {
+        applyLimit((await api.get('/api/session')).idleTimeoutMinutes || 0);
+      } catch {
+        loaded = false;
+      }
+      return;
+    }
+    if (limitMs && Date.now() - lastActivity > limitMs) {
+      limitMs = 0;
+      try {
+        await api.post('/api/logout');
+      } catch {
+        // the server may already have expired it
+      }
+      window.location.reload();
+    }
+  }, 5000);
+
+  document.getElementById('saveIdleTimeoutBtn').addEventListener('click', async () => {
+    const msg = document.getElementById('idleTimeoutMsg');
+    msg.style.color = 'var(--danger)';
+    msg.textContent = '';
+    try {
+      const res = await api.post('/api/session-settings', {
+        idleTimeoutMinutes: Number(document.getElementById('idleTimeoutMinutes').value)
+      });
+      applyLimit(res.idleTimeoutMinutes);
+      lastActivity = Date.now();
+      msg.style.color = 'var(--ok)';
+      msg.textContent = 'Saved.';
+    } catch (err) {
+      msg.textContent = err.message;
+    }
+  });
+})();
