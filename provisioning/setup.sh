@@ -51,6 +51,14 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# lldpd powers the Network tab's neighbor discovery (LLDP, plus optional CDP/FDP). Not
+# fatal if it can't install -- the tab just reports that lldpd is missing. Installing
+# starts it with LLDP on, which is the intended default; it can be turned off from the UI.
+echo "==> Installing lldpd for neighbor discovery..."
+retry apt-get install -y --no-install-recommends lldpd
+if [ $? -ne 0 ]; then
+  echo "WARNING: failed to install lldpd -- Network tab neighbor discovery won't work" >&2
+fi
 # Debian/Raspberry Pi OS's own "npm" package drags in a large tree of
 # separately-packaged "node-*" Debian modules (node-deep-equal,
 # node-get-intrinsic, node-babel7, libjs-util, ...) whose versions frequently

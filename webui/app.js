@@ -512,9 +512,71 @@ async function loadNetwork() {
   setTimezoneUi(data.timezone);
   populateStaticIpDevices(data.interfaces);
   await loadStaticIpConfig();
+  loadLldp().catch((err) => {
+    document.getElementById('lldpMsg').textContent = err.message;
+  });
 }
 
 document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());
+// ---------- Neighbor discovery (LLDP / CDP / FDP) ----------
+function renderLldpNeighborRows(tbody, neighbors) {
+  tbody.innerHTML = '';
+  for (const n of neighbors) {
+    const tr = document.createElement('tr');
+    const neighborLabel = n.chassisName || n.chassisId || '';
+    const neighborTitle = [n.description, n.chassisId && n.chassisName ? `Chassis ID: ${n.chassisId}` : ''].filter(Boolean).join('\n');
+    tr.innerHTML = `
+      <td>${escapeHtml(n.localInterface || '')}</td>
+      <td>${escapeHtml(n.protocol || '')}</td>
+      <td title="${escapeHtml(neighborTitle)}">${escapeHtml(neighborLabel)}</td>
+      <td title="${escapeHtml(n.portDescription || '')}">${escapeHtml(n.portId || '')}</td>
+      <td>${n.managementIps.length ? n.managementIps.map(escapeHtml).join('<br>') : '<span class="hint">&mdash;</span>'}</td>
+      <td>${escapeHtml(n.vlan || '')}</td>
+      <td>${escapeHtml((n.capabilities || []).join(', '))}</td>
+      <td>${escapeHtml(n.age || '')}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function applyLldpStatus(data) {
+  document.getElementById('lldpEnabled').checked = !!data.active;
+  document.getElementById('lldpCdp').checked = !!data.cdp;
+  document.getElementById('lldpFdp').checked = !!data.fdp;
+  const pill = document.getElementById('lldpStatusPill');
+  pill.classList.toggle('running', !!data.active);
+  document.getElementById('lldpStatusText').textContent = !data.installed ? 'lldpd not installed' : data.active ? 'Running' : 'Stopped';
+  const msg = document.getElementById('lldpMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = !data.installed ? 'lldpd is not installed on this host (sudo apt-get install lldpd).' : data.neighborsError || '';
+  const neighbors = data.neighbors || [];
+  renderLldpNeighborRows(document.querySelector('#lldpNeighborsTable tbody'), neighbors);
+  const empty = document.getElementById('lldpNeighborsEmpty');
+  empty.style.display = neighbors.length ? 'none' : '';
+  empty.textContent = data.active ? 'No neighbors discovered yet -- switches usually announce every 30 seconds.' : 'Neighbor discovery is not running.';
+}
+
+async function loadLldp() {
+  applyLldpStatus(await api.get('/api/lldp'));
+}
+
+document.getElementById('refreshLldpBtn').addEventListener('click', () => loadLldp().catch((err) => (document.getElementById('lldpMsg').textContent = err.message)));
+document.getElementById('saveLldpBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('lldpMsg');
+  msg.textContent = '';
+  try {
+    applyLldpStatus(
+      await api.post('/api/lldp', {
+        enabled: document.getElementById('lldpEnabled').checked,
+        cdp: document.getElementById('lldpCdp').checked,
+        fdp: document.getElementById('lldpFdp').checked
+      })
+    );
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
 
 // ---------- Static IP ----------
 function prefixToMask(prefix) {

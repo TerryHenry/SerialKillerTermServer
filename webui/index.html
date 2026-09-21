@@ -348,6 +348,33 @@
       </div>
 
       <div class="panel">
+        <h2>Neighbor Discovery (LLDP / CDP / FDP)</h2>
+        <p class="hint">Runs <code>lldpd</code> so this host announces itself to, and learns from, the switch it is plugged into &mdash; showing which switch and port each interface connects to. Optional CDP (Cisco) and FDP (Foundry/Brocade) support lets it hear switches that don't speak LLDP.</p>
+        <div class="field-row">
+          <label for="lldpEnabled">Enable LLDP</label>
+          <input type="checkbox" id="lldpEnabled" />
+          <span class="status-pill" id="lldpStatusPill"><span class="dot"></span><span id="lldpStatusText">&mdash;</span></span>
+        </div>
+        <div class="field-row">
+          <label for="lldpCdp">Also listen for CDP</label>
+          <input type="checkbox" id="lldpCdp" />
+        </div>
+        <div class="field-row">
+          <label for="lldpFdp">Also listen for FDP</label>
+          <input type="checkbox" id="lldpFdp" />
+        </div>
+        <div class="field-row">
+          <button id="saveLldpBtn" class="primary">Apply</button>
+          <button id="refreshLldpBtn" class="secondary">Refresh Neighbors</button>
+          <span class="auth-error" id="lldpMsg"></span>
+        </div>
+        <table class="data-table" id="lldpNeighborsTable">
+          <thead><tr><th>Local Interface</th><th>Protocol</th><th>Neighbor</th><th>Neighbor Port</th><th>Mgmt IP</th><th>VLAN</th><th>Capabilities</th><th>Age</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint" id="lldpNeighborsEmpty">No neighbors discovered yet.</p>
+      </div>
+      <div class="panel">
         <h2>Static IP</h2>
         <div class="field-row">
           <label for="staticIpDevice">Interface</label>

@@ -161,6 +161,21 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   or config files to/from network devices over their console port's
   neighboring management interface. The same tab lists what's in that
   directory, with buttons to upload a file from your machine or delete one.
+  Transfers negotiate a larger block size and window (RFC 2347/2348/2349/7440)
+  when the client asks, stream from disk instead of loading whole files into
+  memory, and uploads land under a temporary name until they complete.
+- **Neighbor discovery (LLDP / CDP / FDP)** — the Network tab shows which
+  switch and port each interface is connected to, via `lldpd` (installed
+  during first-boot setup, and fetched automatically on the first start of an
+  existing Pi that lacks it -- needs internet).
+  LLDP is on by default; CDP (Cisco) and FDP (Foundry/Brocade) listening are
+  optional switches on the same panel. A managed box's hub can also read its
+  neighbors and change these settings remotely.
+- **Hub-managed users** — when this box is managed by a Central Office hub,
+  the hub can push console users to it (Sync Users / "Push to edge sites").
+  Those logins are password-only and replaced wholesale on each sync;
+  accounts created locally here are never touched, and a local account wins
+  if a pushed username collides with it.
 - Runs as `terminalserver.service` under a dedicated unprivileged
   `terminalserver` system user (member of `dialout` for serial access), with
   `CAP_NET_BIND_SERVICE` granted so it can bind TFTP's privileged port 69
