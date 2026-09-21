@@ -189,11 +189,12 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 - **Configurable dashboard** — hide, show and reorder the Dashboard's widgets (System,
   Serial Ports, System Information, Active Sessions, Recent Activity) with
   **Customize**; the layout is remembered in that browser.
-- The SSH port menu no longer shows device paths, only each port's label and baud rate.- **Hub-managed users** — when this box is managed by a Central Office hub,
-  the hub can push console users to it (Sync Users / "Push to edge sites").
-  Those logins are password-only and replaced wholesale on each sync;
-  accounts created locally here are never touched, and a local account wins
-  if a pushed username collides with it.
+- The SSH port menu no longer shows device paths, only each port's label and baud rate.
+- **Hub-managed users** — when this box is managed by a Central Office hub, the hub can
+  push console users to it (Sync Users / "Push to edge sites"). A sync replaces the box's
+  whole user table, like admin sync: locally created users are removed, and synced logins are
+  password-only (no 2FA or key). A sync that matches no hub users is refused rather than
+  wiping the box's logins.
 - Runs as `terminalserver.service` under a dedicated unprivileged
   `terminalserver` system user (member of `dialout` for serial access), with
   `CAP_NET_BIND_SERVICE` granted so it can bind TFTP's privileged port 69
