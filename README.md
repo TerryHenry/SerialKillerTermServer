@@ -175,7 +175,15 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
   each common speed (8N1, then 7E1) after sending a carriage return and fills in the
   first one that returns readable text. It refuses a port that has a live session, and
   only opens devices this box actually reports.
-- **Admin idle timeout** — admins are signed out after a period with no mouse or
+- **Batch actions** — the Batch tab runs one script against several of this box's serial
+  ports at once, for jobs like logging in and rebooting, factory-resetting or upgrading a
+  set of devices. Steps are one per line (`login`, `send`, `expect`, `expect-regex`,
+  `wait`, `set`; any other line is typed as a command), with `{{username}}`/`{{password}}`
+  filled in per device from fields that are never saved. It goes through the same access
+  modes as any session: a port a user has open (exclusive) fails with that reason, and a
+  read-only port is refused. Each port gets a record of per-step status, the device's
+  output and any failure reason; batches can be cancelled, scripts saved as templates, and
+  the last 50 batches are kept. (The Central Office hub has the same feature across sites.)- **Admin idle timeout** — admins are signed out after a period with no mouse or
   keyboard activity (Admin Account tab; default 5 minutes, 0 disables it), enforced by
   the server as well as the browser.
 - **Configurable dashboard** — hide, show and reorder the Dashboard's widgets (System,
