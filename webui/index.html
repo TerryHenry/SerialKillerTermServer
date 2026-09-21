@@ -15,9 +15,9 @@
       <h1>Set up Serial Killer Terminal Server</h1>
       <p class="hint">Create the administrator account used to manage this console server.</p>
       <label>Admin username</label>
-      <input type="text" id="setupUsername" value="admin" required />
+      <input type="text" id="setupUsername" value="admin" required autocomplete="username" />
       <label>Admin password <span class="hint" id="setupPasswordHint">(min 8 characters)</span></label>
-      <input type="password" id="setupPassword" minlength="8" required />
+      <input type="password" id="setupPassword" minlength="8" required autocomplete="new-password" />
       <div class="auth-error" id="setupError"></div>
       <button type="submit" class="primary">Create Admin Account</button>
     </form>
@@ -29,9 +29,9 @@
       <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
       <h1>Serial Killer Terminal Server</h1>
       <label>Username</label>
-      <input type="text" id="loginUsername" required />
+      <input type="text" id="loginUsername" required autocomplete="username" />
       <label>Password</label>
-      <input type="password" id="loginPassword" required />
+      <input type="password" id="loginPassword" required autocomplete="current-password" />
       <div class="auth-error" id="loginError"></div>
       <button type="submit" class="primary">Sign In</button>
     </form>
@@ -44,9 +44,9 @@
       <h1>Change the default password</h1>
       <p class="hint">This account is still using the default password. Choose a new one to continue.</p>
       <label>New password <span class="hint" id="forceChangePasswordHint">(min 8 characters)</span></label>
-      <input type="password" id="forceChangePassword" minlength="8" required />
+      <input type="password" id="forceChangePassword" minlength="8" required autocomplete="new-password" />
       <label>Confirm password</label>
-      <input type="password" id="forceChangePasswordConfirm" minlength="8" required />
+      <input type="password" id="forceChangePasswordConfirm" minlength="8" required autocomplete="new-password" />
       <div class="auth-error" id="forceChangeError"></div>
       <button type="submit" class="primary">Set Password &amp; Continue</button>
     </form>
@@ -715,11 +715,11 @@
         <p class="hint">Signed in as <strong id="myUsername">&mdash;</strong>.</p>
         <div class="field-row column">
           <label for="newAdminPassword">New password <span class="hint" id="newAdminPasswordHint"></span></label>
-          <input type="password" id="newAdminPassword" minlength="8" />
+          <input type="password" id="newAdminPassword" minlength="8" autocomplete="new-password" />
         </div>
         <div class="field-row column">
           <label for="newAdminPasswordConfirm">Confirm new password</label>
-          <input type="password" id="newAdminPasswordConfirm" minlength="8" />
+          <input type="password" id="newAdminPasswordConfirm" minlength="8" autocomplete="new-password" />
         </div>
         <div class="field-row">
           <button id="changeAdminPasswordBtn">Change Password</button>
@@ -732,11 +732,11 @@
         <p class="hint">The Linux <code>admin</code> account used for SSH on port 22 (normal shell access to the Pi itself) &mdash; separate from this web login and from the SSH-to-serial console users. Its default password is expired from first boot, so a shell login forces a real one even if you don't change it here first.</p>
         <div class="field-row column">
           <label for="osPassword">New password <span class="hint" id="osPasswordHint"></span></label>
-          <input type="password" id="osPassword" minlength="8" />
+          <input type="password" id="osPassword" minlength="8" autocomplete="new-password" />
         </div>
         <div class="field-row column">
           <label for="osPasswordConfirm">Confirm new password</label>
-          <input type="password" id="osPasswordConfirm" minlength="8" />
+          <input type="password" id="osPasswordConfirm" minlength="8" autocomplete="new-password" />
         </div>
         <div class="field-row">
           <button id="changeOsPasswordBtn">Change Password</button>
@@ -997,7 +997,7 @@
       <h3 id="userModalTitle">Add User</h3>
       <div class="field-row column">
         <label for="userUsername">Username</label>
-        <input type="text" id="userUsername" />
+        <input type="text" id="userUsername" autocomplete="off" />
         <span class="field-error" id="userUsernameError"></span>
       </div>
       <div class="field-row column">
@@ -1010,10 +1010,10 @@
       </div>
       <div class="field-row column" id="userPasswordRow">
         <label for="userPassword">Password <span class="hint">(leave blank to keep existing)</span></label>
-        <input type="password" id="userPassword" />
+        <input type="password" id="userPassword" autocomplete="new-password" />
         <span class="hint" id="userPasswordPolicyHint"></span>
         <label for="userPasswordConfirm">Confirm password</label>
-        <input type="password" id="userPasswordConfirm" />
+        <input type="password" id="userPasswordConfirm" autocomplete="new-password" />
         <span class="field-error" id="userPasswordError"></span>
       </div>
       <div class="field-row column" id="userPublicKeyRow">
@@ -1076,15 +1076,15 @@
       <h3 id="adminModalTitle">Add Admin</h3>
       <div class="field-row column">
         <label for="adminUsername">Username</label>
-        <input type="text" id="adminUsername" />
+        <input type="text" id="adminUsername" autocomplete="off" />
         <span class="field-error" id="adminUsernameError"></span>
       </div>
       <div class="field-row column">
         <label for="adminPassword">Password <span class="hint" id="adminPasswordHint">(leave blank to keep existing)</span></label>
-        <input type="password" id="adminPassword" minlength="8" />
+        <input type="password" id="adminPassword" minlength="8" autocomplete="new-password" />
         <span class="hint" id="adminPasswordPolicyHint"></span>
         <label for="adminPasswordConfirm">Confirm password</label>
-        <input type="password" id="adminPasswordConfirm" minlength="8" />
+        <input type="password" id="adminPasswordConfirm" minlength="8" autocomplete="new-password" />
         <span class="field-error" id="adminPasswordError"></span>
       </div>
       <input type="hidden" id="adminId" />
