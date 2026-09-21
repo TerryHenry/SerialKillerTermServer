@@ -129,6 +129,30 @@
 
       <main class="tab-panel-area">
     <div class="tab-content active" id="tab-dashboard">
+      <div class="panel" data-widget="connection-status">
+        <h2>Connection Status</h2>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <span class="stat-label">Hostname</span>
+            <span class="stat-value" id="connHostname" style="font-size: 18px; overflow-wrap: anywhere;">&mdash;</span>
+            <span class="stat-sub" id="connMdns"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">IP Address</span>
+            <span class="stat-value" id="connIps" style="font-size: 18px; overflow-wrap: anywhere;">&mdash;</span>
+            <span class="stat-sub" id="connIpNames"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Network</span>
+            <span class="stat-value" id="connNetwork">&mdash;</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Central Office Hub</span>
+            <span class="stat-value" id="connHub">&mdash;</span>
+            <span class="stat-sub" id="connHubSub"></span>
+          </div>
+        </div>
+      </div>
       <div class="panel">
         <h2>System</h2>
         <div class="stat-grid">

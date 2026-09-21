@@ -379,6 +379,7 @@ input.invalid, textarea.invalid {
 }
 .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .pill.ok { background: rgba(63, 185, 80, 0.14); color: var(--ok); }
+.pill.warn { background: rgba(217, 165, 42, 0.14); color: var(--warn); }
 .pill.mute { background: var(--overlay-1); color: var(--text-dim); }
 .pill.accent { background: rgba(168, 98, 31, 0.18); color: var(--accent-hover); }
 

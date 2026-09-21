@@ -2080,6 +2080,8 @@ function connectEvents() {
   eventSource.addEventListener('fleet-status', (e) => {
     const status = JSON.parse(e.data);
     setFleetStatus(status.connected, document.getElementById('fleetMode').value);
+    connHub.connected = status.connected;
+    renderHubStatus();
   });
 }
 
@@ -2208,6 +2210,42 @@ document.getElementById('rollbackUpdateBtn').addEventListener('click', () => {
   );
 });
 
+// ---------- Dashboard: connection status ----------
+let connHub = { mode: 'standalone', host: '', connected: false };
+
+function pillHtml(cls, text) {
+  return `<span class="pill ${cls}"><span class="dot"></span>${escapeHtml(text)}</span>`;
+}
+
+function renderHubStatus() {
+  const el = document.getElementById('connHub');
+  const sub = document.getElementById('connHubSub');
+  if (connHub.mode !== 'managed' || !connHub.host) {
+    el.innerHTML = pillHtml('mute', connHub.mode === 'managed' ? 'Not configured' : 'Standalone');
+    sub.textContent = connHub.mode === 'managed' ? 'No hub address set' : 'Not managed by a hub';
+    return;
+  }
+  el.innerHTML = connHub.connected ? pillHtml('ok', 'Connected') : pillHtml('warn', 'Disconnected');
+  sub.textContent = connHub.host;
+}
+
+async function loadConnectionStatus() {
+  const s = await api.get('/api/status');
+  document.getElementById('connHostname').textContent = s.hostname;
+  document.getElementById('connMdns').textContent = s.mdnsName;
+  document.getElementById('connIps').innerHTML = s.addresses.length
+    ? s.addresses.map((a) => escapeHtml(a.ip)).join('<br>')
+    : '&mdash;';
+  document.getElementById('connIpNames').textContent = s.addresses.map((a) => a.name).join(', ');
+  document.getElementById('connNetwork').innerHTML = s.networkConnected ? pillHtml('ok', 'Connected') : pillHtml('warn', 'No network');
+  connHub = s.hub;
+  renderHubStatus();
+}
+
+// Slow poll for address/link changes; the hub tunnel state also arrives instantly over SSE.
+setInterval(() => {
+  if (appRoot.classList.contains('active')) loadConnectionStatus().catch(() => {});
+}, 10000);
 // ---------- Init ----------
 async function initApp() {
   const status = await api.get('/api/server/status');
@@ -2226,6 +2264,7 @@ async function initApp() {
   await loadVersion();
   await loadUpdateStatus();
   await loadSystemInfo();
+  await loadConnectionStatus();
   await loadCapturesTable();
   await loadSyslogSettings();
   renderSessions(await api.get('/api/sessions'));
