@@ -44,7 +44,7 @@ COPYFILE_DISABLE=1 tar -czf "$APP_TAR" \
   --exclude='build-image.sh' \
   --exclude='.DS_Store' \
   -C "$SCRIPT_DIR" \
-  server.js package.json package-lock.json lib webui provisioning
+  server.js package.json package-lock.json lib webui provisioning HANDBOOK.html QUICKSTART.html
 
 # Published alongside the tarball as its own release asset -- the in-place updater
 # (lib/selfUpdate.js) refuses to apply a downloaded update whose checksum doesn't match
