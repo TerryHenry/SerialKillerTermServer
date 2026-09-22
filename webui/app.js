@@ -1526,10 +1526,25 @@ async function loadFleetSettings() {
   document.getElementById('fleetHostKeyFingerprint').value = fleet.hubHostKeyFingerprint || '';
   document.getElementById('fleetTlsFingerprint').value = fleet.hubTlsFingerprint || '';
   document.getElementById('fleetPublicKey').textContent = fleet.publicKey || '(unavailable)';
+  document.getElementById('remoteShellEnabled').checked = !!fleet.remoteShellEnabled;
   setFleetStatus(fleet.connected, fleet.mode);
   setFleetHostKeyWarning(fleet.mode, fleet.hubHostKeyFingerprint);
   setFleetTlsWarning(fleet.mode, fleet.hubTlsFingerprint);
 }
+
+document.getElementById('saveRemoteShellBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('fleetMsg');
+  msg.textContent = '';
+  try {
+    const enabled = document.getElementById('remoteShellEnabled').checked;
+    await api.post('/api/remote-shell-settings', { enabled });
+    msg.style.color = 'var(--ok)';
+    msg.textContent = `Diagnostic shell access ${enabled ? 'enabled' : 'disabled'}.`;
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
 
 /** Applied after Save/Enroll when the "disable local console" box is checked and the
  * resulting mode is managed -- reuses the existing SSH-stop and web-console-disable

@@ -287,6 +287,12 @@
         <div class="field-row">
           <button id="saveFleetBtn" class="primary">Save</button>
         </div>
+        <div class="field-row">
+          <label for="remoteShellEnabled">Allow the hub to open a diagnostic shell on this box</label>
+          <input type="checkbox" id="remoteShellEnabled" />
+          <button id="saveRemoteShellBtn" class="secondary">Save</button>
+          <span class="hint">Off by default. When on, a hub admin can open a real interactive shell here through the tunnel -- for ping/traceroute/etc -- running as this app's own unprivileged account (no sudo, no root). Takes effect immediately, independent of the fleet settings above.</span>
+        </div>
         <div class="field-row column">
           <label>This box's tunnel public key</label>
           <pre class="code-block" id="fleetPublicKey">loading...</pre>
