@@ -888,6 +888,15 @@
         </div>
         <p class="hint" id="updateProgress"></p>
         <p><a href="https://github.com/TerryHenry/SerialKillerTermServer/releases" target="_blank" rel="noopener">View all releases on GitHub</a></p>
+
+        <div id="signingKeyMissingSection" hidden>
+          <p class="hint"><span class="pill warn"><span class="dot"></span>No release signing key</span> This box was imaged before release signatures existed, so it has no trust anchor and can't verify (or self-apply) an update -- that's what "could not read the release signing public key" means if you've seen it in the Log tab. Paste the public key from the repo root (<a href="https://github.com/TerryHenry/SerialKillerTermServer/blob/main/release-signing-pubkey.pem" target="_blank" rel="noopener">release-signing-pubkey.pem</a>) below to fix this once. It can only be set while none exists -- once saved, it's fixed the same way it would be from a fresh image.</p>
+          <textarea id="signingKeyInput" rows="4" style="width: 100%; font-family: monospace; font-size: 0.85em;" placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"></textarea>
+          <div class="field-row">
+            <button id="setSigningKeyBtn">Set Signing Key</button>
+          </div>
+          <p class="hint" id="signingKeyMsg"></p>
+        </div>
       </div>
     </div>
 

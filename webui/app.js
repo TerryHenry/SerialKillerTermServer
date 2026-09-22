@@ -2139,7 +2139,32 @@ document.getElementById('checkUpdateBtn').addEventListener('click', async () => 
 async function loadUpdateStatus() {
   const status = await api.get('/api/update/status');
   document.getElementById('rollbackUpdateBtn').hidden = !status.hasBackup;
+  document.getElementById('signingKeyMissingSection').hidden = !!status.hasSigningKey;
 }
+
+document.getElementById('setSigningKeyBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('signingKeyMsg');
+  const pem = document.getElementById('signingKeyInput').value.trim();
+  msg.textContent = '';
+  if (!pem) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Paste the public key first.';
+    return;
+  }
+  if (!confirm('Set this as the release signing public key? This box currently has none, so this only works once -- verify you copied it correctly from the repo before continuing.')) {
+    return;
+  }
+  try {
+    await api.post('/api/update/signing-key', { pem });
+    msg.style.color = 'var(--ok)';
+    msg.textContent = 'Signing key set. Updates can now be verified and self-applied.';
+    document.getElementById('signingKeyInput').value = '';
+    await loadUpdateStatus();
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
 
 /** Polls a no-auth endpoint until it responds, since the service restart this waits out
  * also invalidates the in-memory session -- a 401 from an authenticated endpoint would
