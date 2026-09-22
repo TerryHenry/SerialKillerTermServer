@@ -45,7 +45,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-retry apt-get install -y --no-install-recommends ca-certificates curl gnupg build-essential python3 openssl
+retry apt-get install -y --no-install-recommends ca-certificates curl gnupg build-essential python3 openssl traceroute
 if [ $? -ne 0 ]; then
   echo "FATAL: failed to install base packages" >&2
   exit 1
