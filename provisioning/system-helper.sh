@@ -123,14 +123,20 @@ case "${1:-}" in
     exec lldpcli -f json0 show neighbors details
     ;;
   ups-install)
-    # Fixed package name only. Idempotent: does nothing if already present. "nut" pulls
-    # in nut-client + nut-server + the driver binaries (usbhid-ups, blazer_ser,
+    # Fixed package list only. Idempotent: does nothing if already present. "nut" pulls
+    # in nut-client + nut-server + most driver binaries (usbhid-ups, blazer_ser,
     # genericups, dummy-ups, etc.) -- not installed until an admin actually configures a
-    # UPS, same as lldpd above.
+    # UPS, same as lldpd above. nut-powerman-pdu is a separate Debian package (pulls in
+    # libpowerman0) that Debian doesn't bundle into the main "nut" package, so it's listed
+    # explicitly -- still tiny and harmless to install even if powerman-pdu is never used.
     if command -v upsd >/dev/null 2>&1; then echo "already installed"; exit 0; fi
     export DEBIAN_FRONTEND=noninteractive
     nice -n 19 apt-get update -qq
     nice -n 19 apt-get install -y --no-install-recommends nut
+    # Best-effort and separate from the required "nut" install above: not every
+    # Debian release/arch combination carries this package, and a box that will never
+    # use powerman-pdu shouldn't fail its whole UPS setup over it.
+    nice -n 19 apt-get install -y --no-install-recommends nut-powerman-pdu || true
     # Debian's nut package auto-enables nut-driver-enumerator's path/service units, which
     # watch ups.conf and start/stop per-UPS driver instances on their own -- nothing else
     # to enable here for the driver itself.
@@ -145,8 +151,16 @@ case "${1:-}" in
     name="${2:?ups name required}"
     driver="${3:?driver required}"
     port="${4:?port required}"
+    # extra: driver-specific single value the Node side already picked out for us --
+    # SNMP community string for snmp-ups, PDU node identifier for powerman-pdu, unused
+    # (and fine to be empty) for every other driver. See lib/upsMonitor.js.
+    extra="${5:-}"
     case "$name" in *[!a-zA-Z0-9_-]*|'') echo "invalid ups name: $name" >&2; exit 1 ;; esac
-    case "$driver" in usbhid-ups|blazer_ser|blazer_usb|genericups|snmp-ups|dummy-ups) ;; *) echo "unsupported driver: $driver" >&2; exit 1 ;; esac
+    case "$driver" in usbhid-ups|blazer_ser|blazer_usb|genericups|snmp-ups|powerman-pdu|dummy-ups) ;; *) echo "unsupported driver: $driver" >&2; exit 1 ;; esac
+    if [ "$driver" = "powerman-pdu" ] && [ -z "$extra" ]; then
+      echo "powerman-pdu requires a PDU identifier" >&2
+      exit 1
+    fi
 
     mkdir -p /etc/nut
     chown root:nut /etc/nut 2>/dev/null || true
@@ -192,6 +206,12 @@ case "${1:-}" in
       printf '\tdesc = "Managed by Serial Killer Terminal Server"\n'
       if [ "$driver" = "dummy-ups" ]; then
         printf '\tmode = dummy-once\n'
+      fi
+      if [ "$driver" = "snmp-ups" ] && [ -n "$extra" ]; then
+        printf '\tcommunity = %s\n' "$extra"
+      fi
+      if [ "$driver" = "powerman-pdu" ]; then
+        printf '\tidentifier = %s\n' "$extra"
       fi
     } > /etc/nut/ups.conf
 
@@ -332,7 +352,7 @@ case "${1:-}" in
     fi
     ;;
   *)
-    echo "usage: system-helper.sh {lldp-install|lldp-status|lldp-set <en> <cdp> <fdp>|lldp-neighbors|ups-install|ups-configure <name> <driver> <port>|ups-disable|ups-status|enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
+    echo "usage: system-helper.sh {lldp-install|lldp-status|lldp-set <en> <cdp> <fdp>|lldp-neighbors|ups-install|ups-configure <name> <driver> <port> [extra]|ups-disable|ups-status|enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
     exit 1
     ;;
 esac

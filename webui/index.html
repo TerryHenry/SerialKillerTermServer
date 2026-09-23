@@ -421,14 +421,26 @@
             <option value="blazer_usb">USB, "smart" protocol (blazer_usb)</option>
             <option value="genericups">Serial, basic contact-closure (genericups)</option>
             <option value="snmp-ups">Network (SNMP)</option>
+            <option value="powerman-pdu">Network PDU, via powerman (powerman-pdu)</option>
             <option value="dummy-ups">Testing only (dummy-ups, no real hardware)</option>
           </select>
         </div>
         <div class="field-row">
-          <label for="upsPort">Port</label>
-          <input type="text" id="upsPort" placeholder="/dev/ttyUSB0, or 'auto' for USB" autocomplete="off" style="width: 16em" />
+          <label for="upsPort" id="upsPortLabel">Port</label>
+          <input type="text" id="upsPort" list="upsPortsList" placeholder="/dev/ttyUSB0, or 'auto' for USB" autocomplete="off" style="width: 16em" />
+          <datalist id="upsPortsList"></datalist>
           <label for="upsName">NUT name</label>
           <input type="text" id="upsName" placeholder="ups" autocomplete="off" style="width: 8em" />
+        </div>
+        <div class="field-row" id="upsCommunityRow" style="display: none">
+          <label for="upsCommunity">SNMP community</label>
+          <input type="text" id="upsCommunity" placeholder="public" autocomplete="off" style="width: 12em" />
+          <span class="hint">SNMPv1's shared secret, not a real username/password -- most UPS network cards ship with "public" until changed.</span>
+        </div>
+        <div class="field-row" id="upsIdentifierRow" style="display: none">
+          <label for="upsIdentifier">PDU identifier</label>
+          <input type="text" id="upsIdentifier" placeholder="pdu0" autocomplete="off" style="width: 12em" />
+          <span class="hint">The PDU's node name as already defined in a running powerman daemon's own config -- this app doesn't set up powerman itself or discover PDUs.</span>
         </div>
         <div class="field-row">
           <button id="saveUpsBtn" class="primary">Apply</button>

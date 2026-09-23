@@ -587,12 +587,62 @@ document.getElementById('saveLldpBtn').addEventListener('click', async () => {
 });
 
 // ---------- UPS / power monitoring (NUT) ----------
+// Port means something different per driver -- a real device node for the serial/USB
+// drivers, a hostname for SNMP, a powerman daemon address for the PDU driver -- so the
+// label/placeholder adapt to whichever is selected instead of always saying "Port".
+const UPS_PORT_FIELDS = {
+  'usbhid-ups': { label: 'Port', placeholder: "auto, or /dev/ttyUSB0" },
+  blazer_usb: { label: 'Port', placeholder: "auto, or /dev/ttyUSB0" },
+  blazer_ser: { label: 'Port', placeholder: '/dev/ttyUSB0 or /dev/ttyS0' },
+  genericups: { label: 'Port', placeholder: '/dev/ttyUSB0 or /dev/ttyS0' },
+  'snmp-ups': { label: 'Hostname/IP', placeholder: 'UPS IP address or hostname' },
+  'powerman-pdu': { label: 'Powerman address', placeholder: 'localhost:10101' },
+  'dummy-ups': { label: 'Port', placeholder: 'ignored for dummy-ups' }
+};
+
+function updateUpsDriverFields() {
+  const driver = document.getElementById('upsDriver').value;
+  const fields = UPS_PORT_FIELDS[driver] || UPS_PORT_FIELDS['usbhid-ups'];
+  document.getElementById('upsPortLabel').textContent = fields.label;
+  document.getElementById('upsPort').placeholder = fields.placeholder;
+  document.getElementById('upsCommunityRow').style.display = driver === 'snmp-ups' ? '' : 'none';
+  document.getElementById('upsIdentifierRow').style.display = driver === 'powerman-pdu' ? '' : 'none';
+}
+document.getElementById('upsDriver').addEventListener('change', updateUpsDriverFields);
+
+// Same pattern as refreshSystemPortsDatalist() for console ports: only suggest serial
+// devices that aren't already claimed by a configured console port, so a UPS's serial
+// cable doesn't collide with one. Purely a suggestion list (a plain text input under the
+// hood), so it doesn't get in the way of typing a hostname or powerman address instead.
+async function refreshUpsPortsDatalist() {
+  const [systemPorts, configuredPorts] = await Promise.all([
+    api.get('/api/ports/system'),
+    api.get('/api/ports')
+  ]);
+  const assignedPaths = new Set(configuredPorts.map((p) => p.path));
+  const list = document.getElementById('upsPortsList');
+  list.innerHTML = '';
+  const autoOpt = document.createElement('option');
+  autoOpt.value = 'auto';
+  list.appendChild(autoOpt);
+  for (const p of systemPorts) {
+    if (assignedPaths.has(p.path)) continue;
+    const opt = document.createElement('option');
+    opt.value = p.path;
+    opt.label = p.manufacturer ? `${p.path} (${p.manufacturer})` : p.path;
+    list.appendChild(opt);
+  }
+}
+
 function applyUpsStatus(data) {
   const { config, service, live, liveError } = data;
   document.getElementById('upsEnabled').checked = !!config.enabled;
   document.getElementById('upsDriver').value = config.driver || 'usbhid-ups';
   document.getElementById('upsPort').value = config.port === 'auto' ? '' : config.port || '';
   document.getElementById('upsName').value = config.name || 'ups';
+  document.getElementById('upsCommunity').value = config.community || '';
+  document.getElementById('upsIdentifier').value = config.identifier || '';
+  updateUpsDriverFields();
 
   const running = !!(service.serverActive && service.monitorActive);
   const pill = document.getElementById('upsStatusPill');
@@ -630,7 +680,8 @@ function applyUpsStatus(data) {
 }
 
 async function loadUps() {
-  applyUpsStatus(await api.get('/api/ups'));
+  const [status] = await Promise.all([api.get('/api/ups'), refreshUpsPortsDatalist().catch(() => {})]);
+  applyUpsStatus(status);
 }
 
 document.getElementById('refreshUpsBtn').addEventListener('click', () => loadUps().catch((err) => (document.getElementById('upsMsg').textContent = err.message)));
@@ -641,8 +692,10 @@ document.getElementById('saveUpsBtn').addEventListener('click', async () => {
   const port = document.getElementById('upsPort').value.trim() || 'auto';
   const name = document.getElementById('upsName').value.trim() || 'ups';
   const driver = document.getElementById('upsDriver').value;
+  const community = document.getElementById('upsCommunity').value.trim();
+  const identifier = document.getElementById('upsIdentifier').value.trim();
   try {
-    await api.post('/api/ups', { enabled, name, driver, port });
+    await api.post('/api/ups', { enabled, name, driver, port, community, identifier });
     await loadUps();
   } catch (err) {
     msg.style.color = 'var(--danger)';
