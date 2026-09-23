@@ -122,6 +122,136 @@ case "${1:-}" in
   lldp-neighbors)
     exec lldpcli -f json0 show neighbors details
     ;;
+  ups-install)
+    # Fixed package name only. Idempotent: does nothing if already present. "nut" pulls
+    # in nut-client + nut-server + the driver binaries (usbhid-ups, blazer_ser,
+    # genericups, dummy-ups, etc.) -- not installed until an admin actually configures a
+    # UPS, same as lldpd above.
+    if command -v upsd >/dev/null 2>&1; then echo "already installed"; exit 0; fi
+    export DEBIAN_FRONTEND=noninteractive
+    nice -n 19 apt-get update -qq
+    nice -n 19 apt-get install -y --no-install-recommends nut
+    # Debian's nut package auto-enables nut-driver-enumerator's path/service units, which
+    # watch ups.conf and start/stop per-UPS driver instances on their own -- nothing else
+    # to enable here for the driver itself.
+    ;;
+  ups-configure)
+    # ups-configure <name> <driver> <port>. Writes the whole standalone NUT config
+    # (single box, driver + upsd + upsmon all local) from scratch every time -- simpler
+    # and safer than trying to patch an existing config in place, and cheap since this
+    # only runs when an admin actively changes UPS settings. The one thing NOT
+    # regenerated is upsd's own monitoring password, preserved across reconfigures so
+    # upsmon doesn't need restarting for no reason.
+    name="${2:?ups name required}"
+    driver="${3:?driver required}"
+    port="${4:?port required}"
+    case "$name" in *[!a-zA-Z0-9_-]*|'') echo "invalid ups name: $name" >&2; exit 1 ;; esac
+    case "$driver" in usbhid-ups|blazer_ser|blazer_usb|genericups|snmp-ups|dummy-ups) ;; *) echo "unsupported driver: $driver" >&2; exit 1 ;; esac
+
+    mkdir -p /etc/nut
+    chown root:nut /etc/nut 2>/dev/null || true
+
+    existing_password=""
+    if [ -f /etc/nut/upsd.users ]; then
+      existing_password="$(sed -n 's/^[[:space:]]*password[[:space:]]*=[[:space:]]*//p' /etc/nut/upsd.users | head -1)"
+    fi
+    password="$existing_password"
+    [ -n "$password" ] || password="$(openssl rand -hex 16)"
+
+    printf 'MODE=standalone\n' > /etc/nut/nut.conf
+
+    port_effective="$port"
+    if [ "$driver" = "dummy-ups" ]; then
+      # dummy-ups reads its simulated values from a plain "key: value" file (the same
+      # shape upsc itself prints, by design -- a real capture can be dropped in here
+      # verbatim) -- NUT's own package ships no sample file, confirmed against the real
+      # Debian package contents, so one is generated here rather than pointing at
+      # something that doesn't exist. Fixed path regardless of whatever port value was
+      # submitted for this driver -- there's nothing else it could meaningfully mean.
+      port_effective=/etc/nut/dummy-ups.dev
+      if [ ! -f "$port_effective" ]; then
+        {
+          printf 'battery.charge: 100\n'
+          printf 'battery.runtime: 3600\n'
+          printf 'battery.voltage: 13.5\n'
+          printf 'device.model: Dummy UPS (simulated)\n'
+          printf 'device.type: ups\n'
+          printf 'input.voltage: 120.0\n'
+          printf 'ups.load: 15\n'
+          printf 'ups.mfr: Serial Killer Terminal Server\n'
+          printf 'ups.model: Dummy UPS (simulated)\n'
+          printf 'ups.status: OL\n'
+        } > "$port_effective"
+      fi
+    fi
+
+    {
+      printf '[%s]\n' "$name"
+      printf '\tdriver = %s\n' "$driver"
+      printf '\tport = %s\n' "$port_effective"
+      printf '\tdesc = "Managed by Serial Killer Terminal Server"\n'
+      if [ "$driver" = "dummy-ups" ]; then
+        printf '\tmode = dummy-once\n'
+      fi
+    } > /etc/nut/ups.conf
+
+    printf 'LISTEN 127.0.0.1 3493\n' > /etc/nut/upsd.conf
+
+    {
+      printf '[upsmon]\n'
+      printf '\tpassword = %s\n' "$password"
+      printf '\tupsmon primary\n'
+      printf '\tactions = SET\n'
+      printf '\tinstcmds = ALL\n'
+    } > /etc/nut/upsd.users
+
+    {
+      printf 'MONITOR %s@localhost 1 upsmon %s primary\n' "$name" "$password"
+      printf 'MINSUPPLIES 1\n'
+      printf 'POLLFREQ 5\n'
+      printf 'POLLFREQALERT 5\n'
+      printf 'HOSTSYNC 15\n'
+      # Deliberately NOT wired to an actual shutdown -- this app reports power events
+      # (on battery, low battery) up to the hub via heartbeat/alerts, but a box
+      # unexpectedly powering itself off is a much bigger decision than "monitor and
+      # report," and not one to make on an admin's behalf implicitly. logger here just
+      # gets the event into the system journal (and this app's own log, since it reads
+      # journal/syslog) instead of silently doing nothing.
+      printf 'NOTIFYCMD "/usr/bin/logger -t nut-monitor"\n'
+      printf 'NOTIFYFLAG ONLINE SYSLOG\n'
+      printf 'NOTIFYFLAG ONBATT SYSLOG\n'
+      printf 'NOTIFYFLAG LOWBATT SYSLOG\n'
+      printf 'NOTIFYFLAG COMMOK SYSLOG\n'
+      printf 'NOTIFYFLAG COMMBAD SYSLOG\n'
+      printf 'SHUTDOWNCMD "/usr/bin/logger -t nut-monitor NUT requested a shutdown, but this appliance does not act on it automatically"\n'
+    } > /etc/nut/upsmon.conf
+
+    chown root:nut /etc/nut/upsd.users /etc/nut/upsmon.conf 2>/dev/null || true
+    chmod 640 /etc/nut/upsd.users /etc/nut/upsmon.conf
+    chmod 644 /etc/nut/nut.conf /etc/nut/ups.conf /etc/nut/upsd.conf
+
+    systemctl daemon-reload
+    systemctl enable --now nut-server.service >/dev/null 2>&1 || true
+    systemctl enable --now nut-monitor.service >/dev/null 2>&1 || true
+    # nut-driver-enumerator (path unit watching ups.conf) starts the actual per-UPS
+    # driver instance on its own within a couple of seconds of the file changing: no
+    # direct systemctl call needed for it here, and calling one directly would race the
+    # enumerator's own regeneration of the unit file.
+    ;;
+  ups-disable)
+    systemctl disable --now nut-monitor.service >/dev/null 2>&1 || true
+    systemctl disable --now nut-server.service >/dev/null 2>&1 || true
+    ;;
+  ups-status)
+    # Read-only: reports whether nut is installed and upsd/upsmon are active, as
+    # key=value lines the app parses -- mirrors lldp-status.
+    installed=0; command -v upsd >/dev/null 2>&1 && installed=1
+    serverActive=0; systemctl is-active --quiet nut-server.service 2>/dev/null && serverActive=1
+    monitorActive=0; systemctl is-active --quiet nut-monitor.service 2>/dev/null && monitorActive=1
+    echo "installed=$installed"
+    echo "serverActive=$serverActive"
+    echo "monitorActive=$monitorActive"
+    ;;
   service-restart)
     # Takes no arguments -- the app can only ever restart itself, never target an
     # arbitrary unit. All the actual update logic (download, checksum, staging,
@@ -202,7 +332,7 @@ case "${1:-}" in
     fi
     ;;
   *)
-    echo "usage: system-helper.sh {lldp-install|lldp-status|lldp-set <en> <cdp> <fdp>|lldp-neighbors|enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
+    echo "usage: system-helper.sh {lldp-install|lldp-status|lldp-set <en> <cdp> <fdp>|lldp-neighbors|ups-install|ups-configure <name> <driver> <port>|ups-disable|ups-status|enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
     exit 1
     ;;
 esac

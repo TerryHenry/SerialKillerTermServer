@@ -406,6 +406,46 @@
         <p class="hint" id="lldpNeighborsEmpty">No neighbors discovered yet.</p>
       </div>
       <div class="panel">
+        <h2>UPS / Power Monitoring</h2>
+        <p class="hint">Runs <a href="https://networkupstools.org/" target="_blank" rel="noopener">Network UPS Tools</a> (NUT) against a UPS attached to this box, so its battery status is visible here and reported to the hub. Off by default, and not installed until you enable it here (needs internet access the first time).</p>
+        <div class="field-row">
+          <label for="upsEnabled">Enable UPS monitoring</label>
+          <input type="checkbox" id="upsEnabled" />
+          <span class="status-pill" id="upsStatusPill"><span class="dot"></span><span id="upsStatusText">&mdash;</span></span>
+        </div>
+        <div class="field-row">
+          <label for="upsDriver">Driver</label>
+          <select id="upsDriver">
+            <option value="usbhid-ups">USB (usbhid-ups) -- most modern UPS units</option>
+            <option value="blazer_ser">Serial, "smart" protocol (blazer_ser)</option>
+            <option value="blazer_usb">USB, "smart" protocol (blazer_usb)</option>
+            <option value="genericups">Serial, basic contact-closure (genericups)</option>
+            <option value="snmp-ups">Network (SNMP)</option>
+            <option value="dummy-ups">Testing only (dummy-ups, no real hardware)</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label for="upsPort">Port</label>
+          <input type="text" id="upsPort" placeholder="/dev/ttyUSB0, or 'auto' for USB" autocomplete="off" style="width: 16em" />
+          <label for="upsName">NUT name</label>
+          <input type="text" id="upsName" placeholder="ups" autocomplete="off" style="width: 8em" />
+        </div>
+        <div class="field-row">
+          <button id="saveUpsBtn" class="primary">Apply</button>
+          <button id="refreshUpsBtn" class="secondary">Refresh Status</button>
+          <span class="auth-error" id="upsMsg"></span>
+        </div>
+        <table class="data-table" id="upsStatusTable">
+          <tbody>
+            <tr><th>Power state</th><td id="upsPowerState">&mdash;</td></tr>
+            <tr><th>Battery charge</th><td id="upsBatteryCharge">&mdash;</td></tr>
+            <tr><th>Estimated runtime</th><td id="upsRuntime">&mdash;</td></tr>
+            <tr><th>Load</th><td id="upsLoad">&mdash;</td></tr>
+            <tr><th>Model</th><td id="upsModel">&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
         <h2>Static IP</h2>
         <div class="field-row">
           <label for="staticIpDevice">Interface</label>

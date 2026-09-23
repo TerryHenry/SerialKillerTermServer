@@ -520,6 +520,9 @@ async function loadNetwork() {
   loadLldp().catch((err) => {
     document.getElementById('lldpMsg').textContent = err.message;
   });
+  loadUps().catch((err) => {
+    document.getElementById('upsMsg').textContent = err.message;
+  });
 }
 
 document.getElementById('refreshNetworkBtn').addEventListener('click', () => loadNetwork());
@@ -577,6 +580,70 @@ document.getElementById('saveLldpBtn').addEventListener('click', async () => {
         fdp: document.getElementById('lldpFdp').checked
       })
     );
+  } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+// ---------- UPS / power monitoring (NUT) ----------
+function applyUpsStatus(data) {
+  const { config, service, live, liveError } = data;
+  document.getElementById('upsEnabled').checked = !!config.enabled;
+  document.getElementById('upsDriver').value = config.driver || 'usbhid-ups';
+  document.getElementById('upsPort').value = config.port === 'auto' ? '' : config.port || '';
+  document.getElementById('upsName').value = config.name || 'ups';
+
+  const running = !!(service.serverActive && service.monitorActive);
+  const pill = document.getElementById('upsStatusPill');
+  pill.classList.toggle('running', running);
+  document.getElementById('upsStatusText').textContent = !service.installed
+    ? 'NUT not installed'
+    : !config.enabled
+      ? 'Disabled'
+      : running
+        ? 'Running'
+        : 'Stopped';
+
+  const msg = document.getElementById('upsMsg');
+  msg.style.color = 'var(--danger)';
+  msg.textContent = liveError || '';
+
+  const powerState = document.getElementById('upsPowerState');
+  if (live) {
+    powerState.innerHTML = live.onBattery
+      ? `<span class="pill warn">On battery${live.lowBattery ? ' -- LOW' : ''}</span>`
+      : live.online
+        ? '<span class="pill ok">On line power</span>'
+        : `<span class="pill mute">${escapeHtml(live.statusCodes.join(' ') || 'Unknown')}</span>`;
+    document.getElementById('upsBatteryCharge').textContent = live.batteryCharge !== null ? `${live.batteryCharge}%` : 'unknown';
+    document.getElementById('upsRuntime').textContent =
+      live.batteryRuntimeSeconds !== null ? `${Math.round(live.batteryRuntimeSeconds / 60)} min` : 'unknown';
+    document.getElementById('upsLoad').textContent = live.loadPercent !== null ? `${live.loadPercent}%` : 'unknown';
+    document.getElementById('upsModel').textContent = live.model || 'unknown';
+  } else {
+    powerState.innerHTML = '<span class="hint">No data</span>';
+    for (const id of ['upsBatteryCharge', 'upsRuntime', 'upsLoad', 'upsModel']) {
+      document.getElementById(id).textContent = '—';
+    }
+  }
+}
+
+async function loadUps() {
+  applyUpsStatus(await api.get('/api/ups'));
+}
+
+document.getElementById('refreshUpsBtn').addEventListener('click', () => loadUps().catch((err) => (document.getElementById('upsMsg').textContent = err.message)));
+document.getElementById('saveUpsBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('upsMsg');
+  msg.textContent = '';
+  const enabled = document.getElementById('upsEnabled').checked;
+  const port = document.getElementById('upsPort').value.trim() || 'auto';
+  const name = document.getElementById('upsName').value.trim() || 'ups';
+  const driver = document.getElementById('upsDriver').value;
+  try {
+    await api.post('/api/ups', { enabled, name, driver, port });
+    await loadUps();
   } catch (err) {
     msg.style.color = 'var(--danger)';
     msg.textContent = err.message;
