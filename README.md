@@ -16,6 +16,9 @@ just want to get connected? See [QUICKSTART.html](QUICKSTART.html). For the
 full reference — the web admin UI, SSH console access, access modes, TFTP,
 backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 
+<img width="1490" height="814" alt="image" src="https://github.com/user-attachments/assets/c5cd8623-336a-4c81-8d39-650f0b81a000" />
+<img width="648" height="372" alt="image" src="https://github.com/user-attachments/assets/22284b15-c48d-4b31-95dc-adb8049bcb1f" />
+
 ## What's on the image
 
 - **SSH server** (default port `2222`) — each user logs in over SSH and is
