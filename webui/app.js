@@ -600,6 +600,12 @@ const UPS_PORT_FIELDS = {
   'dummy-ups': { label: 'Port', placeholder: 'ignored for dummy-ups' }
 };
 
+// Only serial-ish drivers have a device node worth picking from a list -- SNMP's
+// "port" is a hostname and powerman-pdu's is a daemon address, so the picker (and its
+// "won't appear here" HID caveat, which only makes sense next to a device list) is
+// hidden for those rather than shown empty or misleading.
+const UPS_PORT_PICKER_DRIVERS = new Set(['usbhid-ups', 'blazer_ser', 'blazer_usb', 'genericups']);
+
 function updateUpsDriverFields() {
   const driver = document.getElementById('upsDriver').value;
   const fields = UPS_PORT_FIELDS[driver] || UPS_PORT_FIELDS['usbhid-ups'];
@@ -607,32 +613,40 @@ function updateUpsDriverFields() {
   document.getElementById('upsPort').placeholder = fields.placeholder;
   document.getElementById('upsCommunityRow').style.display = driver === 'snmp-ups' ? '' : 'none';
   document.getElementById('upsIdentifierRow').style.display = driver === 'powerman-pdu' ? '' : 'none';
+  document.getElementById('upsPortPickerRow').style.display = UPS_PORT_PICKER_DRIVERS.has(driver) ? '' : 'none';
 }
 document.getElementById('upsDriver').addEventListener('change', updateUpsDriverFields);
 
-// Same pattern as refreshSystemPortsDatalist() for console ports: only suggest serial
-// devices that aren't already claimed by a configured console port, so a UPS's serial
-// cable doesn't collide with one. Purely a suggestion list (a plain text input under the
-// hood), so it doesn't get in the way of typing a hostname or powerman address instead.
-async function refreshUpsPortsDatalist() {
+// Same underlying data as refreshSystemPortsDatalist() for console ports (only serial
+// devices not already claimed by a configured console port), but rendered as a real
+// <select> instead of a <datalist> -- Chrome never shows a datalist option's `label`,
+// only its raw `value`, which is exactly what made every entry here show up as a long,
+// unreadable by-id path with no indication of which physical device it was. A <select>
+// always shows its option text, so the friendly "/dev/ttyUSB1 (FTDI, FT...)" description
+// is what the admin actually sees; picking one just copies the stable by-id path (kept
+// as the value, for the same reboot/replug stability reason the console-port form uses
+// it) into the plain upsPort text field below, which stays the one field that's actually
+// submitted -- so typing a hostname or powerman address over it still works.
+async function refreshUpsPortPicker() {
   const [systemPorts, configuredPorts] = await Promise.all([
     api.get('/api/ports/system'),
     api.get('/api/ports')
   ]);
   const assignedPaths = new Set(configuredPorts.map((p) => p.path));
-  const list = document.getElementById('upsPortsList');
-  list.innerHTML = '';
-  const autoOpt = document.createElement('option');
-  autoOpt.value = 'auto';
-  list.appendChild(autoOpt);
+  const picker = document.getElementById('upsPortPicker');
+  picker.innerHTML = '<option value="">Select a detected port&hellip;</option>';
   for (const p of systemPorts) {
     if (assignedPaths.has(p.path)) continue;
     const opt = document.createElement('option');
     opt.value = p.path;
-    opt.label = p.manufacturer ? `${p.path} (${p.manufacturer})` : p.path;
-    list.appendChild(opt);
+    const shortPath = p.devicePath || p.path;
+    opt.textContent = p.manufacturer ? `${shortPath} (${p.manufacturer}${p.serialNumber ? ', ' + p.serialNumber : ''})` : shortPath;
+    picker.appendChild(opt);
   }
 }
+document.getElementById('upsPortPicker').addEventListener('change', (e) => {
+  if (e.target.value) document.getElementById('upsPort').value = e.target.value;
+});
 
 function applyUpsStatus(data) {
   const { config, service, live, liveError } = data;
@@ -680,7 +694,7 @@ function applyUpsStatus(data) {
 }
 
 async function loadUps() {
-  const [status] = await Promise.all([api.get('/api/ups'), refreshUpsPortsDatalist().catch(() => {})]);
+  const [status] = await Promise.all([api.get('/api/ups'), refreshUpsPortPicker().catch(() => {})]);
   applyUpsStatus(status);
 }
 

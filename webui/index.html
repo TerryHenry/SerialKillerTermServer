@@ -425,10 +425,16 @@
             <option value="dummy-ups">Testing only (dummy-ups, no real hardware)</option>
           </select>
         </div>
+        <div class="field-row" id="upsPortPickerRow">
+          <label for="upsPortPicker">Detected ports</label>
+          <select id="upsPortPicker" style="width: 22em">
+            <option value="">Select a detected port&hellip;</option>
+          </select>
+          <span class="hint">Only lists ports not already assigned to a console. A USB-HID UPS (most modern units) won't appear here at all &mdash; leave Port as "auto" for those.</span>
+        </div>
         <div class="field-row">
           <label for="upsPort" id="upsPortLabel">Port</label>
-          <input type="text" id="upsPort" list="upsPortsList" placeholder="/dev/ttyUSB0, or 'auto' for USB" autocomplete="off" style="width: 16em" />
-          <datalist id="upsPortsList"></datalist>
+          <input type="text" id="upsPort" placeholder="/dev/ttyUSB0, or 'auto' for USB" autocomplete="off" style="width: 16em" />
           <label for="upsName">NUT name</label>
           <input type="text" id="upsName" placeholder="ups" autocomplete="off" style="width: 8em" />
         </div>
