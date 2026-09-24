@@ -28,6 +28,7 @@
     <form class="auth-card" id="loginForm">
       <img class="auth-logo" src="assets/logo.png" alt="Serial Killer Terminal Server" />
       <h1>Serial Killer Terminal Server</h1>
+      <p class="hint" id="loginHostname" style="display: none"></p>
       <label>Username</label>
       <input type="text" id="loginUsername" required autocomplete="username" />
       <label>Password</label>
@@ -507,6 +508,12 @@
           <span class="hint">Off by default, so existing bookmarks/scripts pointing at the current <code>.local</code> address keep working even after renaming the host. Check this to make the <code>.local</code> address match the new hostname too.</span>
         </div>
         <div class="auth-error" id="systemControlMsg"></div>
+        <div class="field-row">
+          <label for="showHostnameOnLogin">Show hostname on the login screen</label>
+          <input type="checkbox" id="showHostnameOnLogin" />
+          <span class="hint">Off by default -- this is shown to anyone who reaches the login screen, before they've authenticated. Handy for telling apart identical-looking boxes in a rack.</span>
+        </div>
+        <div class="auth-error" id="showHostnameOnLoginMsg"></div>
       </div>
     </div>
 

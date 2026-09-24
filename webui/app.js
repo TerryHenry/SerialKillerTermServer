@@ -149,6 +149,13 @@ async function boot() {
     return;
   }
   if (!session.authenticated) {
+    const hostnameEl = document.getElementById('loginHostname');
+    if (session.hostname) {
+      hostnameEl.textContent = session.hostname;
+      hostnameEl.style.display = '';
+    } else {
+      hostnameEl.style.display = 'none';
+    }
     show(loginScreen);
     document.body.classList.remove('app-mode');
     return;
@@ -1890,6 +1897,7 @@ function formatUptime(seconds) {
 async function loadSystemInfo() {
   const info = await api.get('/api/system/info');
   document.getElementById('systemHostname').value = info.hostname;
+  document.getElementById('showHostnameOnLogin').checked = !!info.showHostnameOnLogin;
   document.getElementById('infoOsRelease').textContent = info.osRelease || 'Unknown';
   document.getElementById('infoKernel').textContent = info.kernel;
   document.getElementById('infoArch').textContent = info.arch;
@@ -1916,6 +1924,18 @@ document.getElementById('saveHostnameBtn').addEventListener('click', async () =>
       ? `Hostname updated. Now reachable at ${result.hostname}.local.`
       : `Hostname updated. The mDNS name was left as-is.`;
   } catch (err) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById('showHostnameOnLogin').addEventListener('change', async (e) => {
+  const msg = document.getElementById('showHostnameOnLoginMsg');
+  msg.textContent = '';
+  try {
+    await api.post('/api/system/show-hostname-on-login', { showHostnameOnLogin: e.target.checked });
+  } catch (err) {
+    e.target.checked = !e.target.checked;
     msg.style.color = 'var(--danger)';
     msg.textContent = err.message;
   }
