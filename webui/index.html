@@ -421,7 +421,8 @@
             <option value="blazer_usb">USB, "smart" protocol (blazer_usb)</option>
             <option value="genericups">Serial, basic contact-closure (genericups)</option>
             <option value="snmp-ups">Network (SNMP)</option>
-            <option value="powerman-pdu">Network PDU, via powerman (powerman-pdu)</option>
+            <option value="cyclades-pm10">Cyclades PM10 (serial PDU, via powerman)</option>
+            <option value="powerman-pdu">Network PDU, external powerman daemon (advanced)</option>
             <option value="dummy-ups">Testing only (dummy-ups, no real hardware)</option>
           </select>
         </div>
@@ -444,9 +445,16 @@
           <span class="hint">SNMPv1's shared secret, not a real username/password -- most UPS network cards ship with "public" until changed.</span>
         </div>
         <div class="field-row" id="upsIdentifierRow" style="display: none">
-          <label for="upsIdentifier">PDU identifier</label>
-          <input type="text" id="upsIdentifier" placeholder="pdu0" autocomplete="off" style="width: 12em" />
-          <span class="hint">The PDU's node name as already defined in a running powerman daemon's own config -- this app doesn't set up powerman itself or discover PDUs.</span>
+          <label for="upsIdentifier">PDU name</label>
+          <input type="text" id="upsIdentifier" placeholder="pm10" autocomplete="off" style="width: 12em" />
+          <span class="hint">Local label only, used for the powerman config this app generates -- doesn't need to match anything else.</span>
+        </div>
+        <div class="field-row" id="upsCredentialsRow" style="display: none">
+          <label for="upsUsername">Login username</label>
+          <input type="text" id="upsUsername" placeholder="admin" autocomplete="off" style="width: 10em" />
+          <label for="upsPassword">Login password</label>
+          <input type="password" id="upsPassword" placeholder="leave blank to keep current" autocomplete="off" style="width: 12em" />
+          <span class="hint">The PM10's own serial console login (factory default is admin/pm8). Stored only in the generated powerman config on this box, never echoed back here -- leave the password blank on later edits to keep it unchanged.</span>
         </div>
         <div class="field-row">
           <button id="saveUpsBtn" class="primary">Apply</button>
@@ -461,6 +469,12 @@
             <tr><th>Load</th><td id="upsLoad">&mdash;</td></tr>
             <tr><th>Model</th><td id="upsModel">&mdash;</td></tr>
           </tbody>
+        </table>
+        <table class="data-table" id="upsOutletsTable" style="display: none">
+          <thead>
+            <tr><th>Outlet</th><th>Description</th><th>State</th></tr>
+          </thead>
+          <tbody id="upsOutletsBody"></tbody>
         </table>
       </div>
       <div class="panel">

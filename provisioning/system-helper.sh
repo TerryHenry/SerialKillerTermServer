@@ -134,9 +134,17 @@ case "${1:-}" in
     nice -n 19 apt-get update -qq
     nice -n 19 apt-get install -y --no-install-recommends nut
     # Best-effort and separate from the required "nut" install above: not every
-    # Debian release/arch combination carries this package, and a box that will never
-    # use powerman-pdu shouldn't fail its whole UPS setup over it.
+    # Debian release/arch combination carries these packages, and a box that will never
+    # use powerman-pdu/cyclades-pm10 shouldn't fail its whole UPS setup over it. "powerman"
+    # is the separate daemon that actually speaks to serial/networked PDUs (Cyclades PM10
+    # included, via its own stock device script); nut-powerman-pdu is just NUT's bridge
+    # into it.
     nice -n 19 apt-get install -y --no-install-recommends nut-powerman-pdu || true
+    nice -n 19 apt-get install -y --no-install-recommends powerman || true
+    # powermand runs as its own unprivileged "powerman" user (see powerman.service), which
+    # needs dialout membership to open a serial-attached PDU the same way "terminalserver"
+    # itself does for console ports.
+    usermod -aG dialout powerman 2>/dev/null || true
     # Debian's nut package auto-enables nut-driver-enumerator's path/service units, which
     # watch ups.conf and start/stop per-UPS driver instances on their own -- nothing else
     # to enable here for the driver itself.
@@ -151,15 +159,161 @@ case "${1:-}" in
     name="${2:?ups name required}"
     driver="${3:?driver required}"
     port="${4:?port required}"
-    # extra: driver-specific single value the Node side already picked out for us --
-    # SNMP community string for snmp-ups, PDU node identifier for powerman-pdu, unused
-    # (and fine to be empty) for every other driver. See lib/upsMonitor.js.
+    # extra: driver-specific single value the Node side already picked out for us -- SNMP
+    # community string for snmp-ups, the powerman device/node name for cyclades-pm10 (used
+    # only in the powerman.conf this script generates, not written to ups.conf -- NUT's
+    # powerman-pdu driver takes no extra settings at all), unused for every other driver.
     extra="${5:-}"
+    # login/password: only meaningful for cyclades-pm10, where they're the PM10's own
+    # serial console credentials (baked into a generated powerman device script -- see
+    # below), not anything NUT itself knows about. Empty for every other driver.
+    login="${6:-}"
+    login_password="${7:-}"
     case "$name" in *[!a-zA-Z0-9_-]*|'') echo "invalid ups name: $name" >&2; exit 1 ;; esac
-    case "$driver" in usbhid-ups|blazer_ser|blazer_usb|genericups|snmp-ups|powerman-pdu|dummy-ups) ;; *) echo "unsupported driver: $driver" >&2; exit 1 ;; esac
-    if [ "$driver" = "powerman-pdu" ] && [ -z "$extra" ]; then
-      echo "powerman-pdu requires a PDU identifier" >&2
-      exit 1
+    case "$driver" in usbhid-ups|blazer_ser|blazer_usb|genericups|snmp-ups|powerman-pdu|cyclades-pm10|dummy-ups) ;; *) echo "unsupported driver: $driver" >&2; exit 1 ;; esac
+
+    pm_dev_file=/etc/powerman/serial-killer-pm10.dev
+    pm_conf_file=/etc/powerman/powerman.conf
+    if [ "$driver" = "cyclades-pm10" ]; then
+      [ -n "$login" ] || { echo "a login username is required for cyclades-pm10" >&2; exit 1; }
+      case "$login" in *[\"\\]*) echo "username may not contain a quote or backslash" >&2; exit 1 ;; esac
+      # A blank password on a reconfigure means "keep what's already there" (matches the
+      # upsd monitoring password pattern just below) -- extracted from the previously
+      # generated device script rather than re-prompting every time an admin just wants to
+      # change, say, the port. Required outright the first time, since there's nothing to
+      # fall back to yet.
+      if [ -z "$login_password" ] && [ -f "$pm_dev_file" ]; then
+        # The login script's two "send" lines (username, then password) are always the
+        # first two lines matching this pattern anywhere in the generated file -- every
+        # other script block (ping/status/on/off/cycle) comes later and follows the
+        # login block, so the 2nd match is unambiguously the password.
+        login_password="$(grep 'send "' "$pm_dev_file" | sed -n '2p' | sed -e 's/^[[:space:]]*send "//' -e 's/\\n"[[:space:]]*$//')"
+      fi
+      [ -n "$login_password" ] || { echo "a login password is required for the first cyclades-pm10 setup" >&2; exit 1; }
+      case "$login_password" in *[\"\\]*) echo "password may not contain a quote or backslash" >&2; exit 1 ;; esac
+      pm_name="$extra"
+      case "$pm_name" in *[!a-zA-Z0-9_-]*|'') pm_name="pm10" ;; esac
+
+      command -v powermand >/dev/null 2>&1 || { echo "powerman is not installed -- run ups-install first" >&2; exit 1; }
+      usermod -aG dialout powerman 2>/dev/null || true
+
+      # Same stock script Debian's powerman package ships at
+      # /etc/powerman/cyclades-pm10.dev, with only the login send lines replaced -- the
+      # factory-default script logs in as admin/pm8, which most real deployments change.
+      # $1/$2 below are powerman's own regex capture-group references (its script
+      # language), not shell variables, hence the escaping.
+      cat > "$pm_dev_file" <<DEVEOF
+#
+# Cyclades PM10 (customized by Serial Killer Terminal Server with the configured login)
+#
+specification "pm10" {
+	timeout 	10
+	pingperiod	60
+	plug name { "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" }
+
+	script login {
+		expect "Username: "
+		send "$login\n"
+		expect "Password: "
+		send "$login_password\n"
+		expect "pm>"
+	}
+	script ping {
+                send "\n"
+                expect "pm>"
+        }
+	script status_all {
+		send "status 1-10\n"
+		expect "Users"
+		foreachplug {
+			expect "([0-9]+)[[:space:]]+Unlocked (ON|OFF)"
+			setplugstate \$1 \$2 on="ON" off="OFF"
+		}
+		expect "pm>"
+	}
+	script on {
+		send "on %s\n"
+		expect "Outlet turned on."
+		expect "pm>"
+	}
+	script on_all {
+		send "on 1-10\n"
+		foreachplug {
+			expect "Outlet turned on."
+		}
+		expect "pm>"
+	}
+	script off {
+		send "off %s\n"
+		expect "Outlet turned off."
+		expect "pm>"
+	}
+	script off_all {
+		send "off 1-10\n"
+		foreachplug {
+			expect "Outlet turned off."
+		}
+		expect "pm>"
+	}
+	script cycle {
+		send "off %s\n"
+		expect "Outlet turned off."
+		expect "pm>"
+		delay 4
+		send "on %s\n"
+		expect "Outlet turned on."
+		expect "pm>"
+	}
+	script cycle_all {
+		send "off 1-10\n"
+		foreachplug {
+			expect "Outlet turned off."
+		}
+		expect "pm>"
+		delay 4
+		send "on 1-10\n"
+		foreachplug {
+			expect "Outlet turned on."
+		}
+		expect "pm>"
+	}
+	script status_temp_all {
+		send "temperature\n"
+		expect "IPDU #1: Temperature: ([0-9.]+)"
+		setplugstate "1" \$1
+		setplugstate "2" \$1
+		setplugstate "3" \$1
+		setplugstate "4" \$1
+		setplugstate "5" \$1
+		setplugstate "6" \$1
+		setplugstate "7" \$1
+		setplugstate "8" \$1
+		setplugstate "9" \$1
+		setplugstate "10" \$1
+	}
+}
+DEVEOF
+      # Owned by the powerman user itself (its own service account, not a shared group)
+      # since the credentials inside are only meant to be readable by the daemon that
+      # needs them and by root -- see powerman.service's "User=powerman".
+      chown powerman:root "$pm_dev_file"
+      chmod 600 "$pm_dev_file"
+
+      {
+        printf 'listen "127.0.0.1:10101"\n'
+        printf 'include "%s"\n' "$pm_dev_file"
+        printf 'device "%s" "pm10" "%s" "9600,8n1"\n' "$pm_name" "$port"
+        printf 'node "%s-outlet[1-10]" "%s"\n' "$pm_name" "$pm_name"
+      } > "$pm_conf_file"
+      chown root:root "$pm_conf_file"
+      chmod 644 "$pm_conf_file"
+
+      systemctl daemon-reload
+      systemctl enable powerman.service >/dev/null 2>&1 || true
+      # powermand only reads its config at startup -- unlike nut-server below, an
+      # enable --now on an already-running instance wouldn't pick up a changed login or
+      # port, so this always restarts it outright.
+      systemctl restart powerman.service
     fi
 
     mkdir -p /etc/nut
@@ -175,6 +329,14 @@ case "${1:-}" in
     printf 'MODE=standalone\n' > /etc/nut/nut.conf
 
     port_effective="$port"
+    driver_effective="$driver"
+    if [ "$driver" = "cyclades-pm10" ]; then
+      # The actual NUT-side driver is always powerman-pdu, talking to the powermand
+      # instance this script just configured on localhost -- "cyclades-pm10" only exists
+      # as a distinct choice at the app/UI level, to trigger the powerman setup above.
+      driver_effective="powerman-pdu"
+      port_effective="localhost:10101"
+    fi
     if [ "$driver" = "dummy-ups" ]; then
       # dummy-ups reads its simulated values from a plain "key: value" file (the same
       # shape upsc itself prints, by design -- a real capture can be dropped in here
@@ -201,7 +363,7 @@ case "${1:-}" in
 
     {
       printf '[%s]\n' "$name"
-      printf '\tdriver = %s\n' "$driver"
+      printf '\tdriver = %s\n' "$driver_effective"
       printf '\tport = %s\n' "$port_effective"
       printf '\tdesc = "Managed by Serial Killer Terminal Server"\n'
       if [ "$driver" = "dummy-ups" ]; then
@@ -210,9 +372,9 @@ case "${1:-}" in
       if [ "$driver" = "snmp-ups" ] && [ -n "$extra" ]; then
         printf '\tcommunity = %s\n' "$extra"
       fi
-      if [ "$driver" = "powerman-pdu" ]; then
-        printf '\tidentifier = %s\n' "$extra"
-      fi
+      # powerman-pdu itself takes no extra ups.conf settings at all (confirmed against
+      # its man page) -- whichever specific PDU/device it reports on is entirely
+      # determined by what powermand was configured with above, not by anything here.
     } > /etc/nut/ups.conf
 
     printf 'LISTEN 127.0.0.1 3493\n' > /etc/nut/upsd.conf
@@ -352,7 +514,7 @@ case "${1:-}" in
     fi
     ;;
   *)
-    echo "usage: system-helper.sh {lldp-install|lldp-status|lldp-set <en> <cdp> <fdp>|lldp-neighbors|ups-install|ups-configure <name> <driver> <port> [extra]|ups-disable|ups-status|enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
+    echo "usage: system-helper.sh {lldp-install|lldp-status|lldp-set <en> <cdp> <fdp>|lldp-neighbors|ups-install|ups-configure <name> <driver> <port> [extra] [login] [login-password]|ups-disable|ups-status|enable|disable|scan|connect <ssid> [password]|ntp-set <server>|timezone-set <tz>|dns-set <servers...>|dns-clear|service-restart|ip-set <conn> <addr> <prefix> <gw>|ip-clear <conn>|os-password-set|reboot|hostname-set <name>}" >&2
     exit 1
     ;;
 esac

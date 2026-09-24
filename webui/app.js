@@ -596,6 +596,7 @@ const UPS_PORT_FIELDS = {
   blazer_ser: { label: 'Port', placeholder: '/dev/ttyUSB0 or /dev/ttyS0' },
   genericups: { label: 'Port', placeholder: '/dev/ttyUSB0 or /dev/ttyS0' },
   'snmp-ups': { label: 'Hostname/IP', placeholder: 'UPS IP address or hostname' },
+  'cyclades-pm10': { label: 'Port', placeholder: '/dev/ttyUSB0 or /dev/ttyS0' },
   'powerman-pdu': { label: 'Powerman address', placeholder: 'localhost:10101' },
   'dummy-ups': { label: 'Port', placeholder: 'ignored for dummy-ups' }
 };
@@ -604,7 +605,7 @@ const UPS_PORT_FIELDS = {
 // "port" is a hostname and powerman-pdu's is a daemon address, so the picker (and its
 // "won't appear here" HID caveat, which only makes sense next to a device list) is
 // hidden for those rather than shown empty or misleading.
-const UPS_PORT_PICKER_DRIVERS = new Set(['usbhid-ups', 'blazer_ser', 'blazer_usb', 'genericups']);
+const UPS_PORT_PICKER_DRIVERS = new Set(['usbhid-ups', 'blazer_ser', 'blazer_usb', 'genericups', 'cyclades-pm10']);
 
 function updateUpsDriverFields() {
   const driver = document.getElementById('upsDriver').value;
@@ -612,7 +613,8 @@ function updateUpsDriverFields() {
   document.getElementById('upsPortLabel').textContent = fields.label;
   document.getElementById('upsPort').placeholder = fields.placeholder;
   document.getElementById('upsCommunityRow').style.display = driver === 'snmp-ups' ? '' : 'none';
-  document.getElementById('upsIdentifierRow').style.display = driver === 'powerman-pdu' ? '' : 'none';
+  document.getElementById('upsIdentifierRow').style.display = driver === 'cyclades-pm10' ? '' : 'none';
+  document.getElementById('upsCredentialsRow').style.display = driver === 'cyclades-pm10' ? '' : 'none';
   document.getElementById('upsPortPickerRow').style.display = UPS_PORT_PICKER_DRIVERS.has(driver) ? '' : 'none';
 }
 document.getElementById('upsDriver').addEventListener('change', updateUpsDriverFields);
@@ -656,6 +658,10 @@ function applyUpsStatus(data) {
   document.getElementById('upsName').value = config.name || 'ups';
   document.getElementById('upsCommunity').value = config.community || '';
   document.getElementById('upsIdentifier').value = config.identifier || '';
+  document.getElementById('upsUsername').value = config.username || '';
+  // Password is never sent back by the server -- always left blank, with the
+  // placeholder explaining that blank means "keep the current one" on a re-save.
+  document.getElementById('upsPassword').value = '';
   updateUpsDriverFields();
 
   const running = !!(service.serverActive && service.monitorActive);
@@ -691,6 +697,29 @@ function applyUpsStatus(data) {
       document.getElementById(id).textContent = '—';
     }
   }
+
+  // PDU drivers (cyclades-pm10/powerman-pdu) report switchable outlets instead of --
+  // or alongside -- battery data; a plain UPS has no outlets at all, so the whole table
+  // stays hidden rather than showing an empty grid.
+  const outletsTable = document.getElementById('upsOutletsTable');
+  const outletsBody = document.getElementById('upsOutletsBody');
+  const outlets = live && live.outlets;
+  if (outlets && outlets.length) {
+    outletsTable.style.display = '';
+    outletsBody.innerHTML = outlets
+      .map(
+        (o) =>
+          `<tr><td>${o.id}</td><td>${escapeHtml(o.desc || '')}</td><td>${
+            o.status
+              ? `<span class="pill ${o.on ? 'ok' : 'mute'}">${escapeHtml(o.status)}</span>`
+              : '<span class="hint">unknown</span>'
+          }</td></tr>`
+      )
+      .join('');
+  } else {
+    outletsTable.style.display = 'none';
+    outletsBody.innerHTML = '';
+  }
 }
 
 async function loadUps() {
@@ -708,8 +737,12 @@ document.getElementById('saveUpsBtn').addEventListener('click', async () => {
   const driver = document.getElementById('upsDriver').value;
   const community = document.getElementById('upsCommunity').value.trim();
   const identifier = document.getElementById('upsIdentifier').value.trim();
+  const username = document.getElementById('upsUsername').value.trim();
+  // Not trimmed, and left as-is (including empty) when the admin didn't type a new one --
+  // the privileged helper reuses the previously configured password in that case.
+  const password = document.getElementById('upsPassword').value;
   try {
-    await api.post('/api/ups', { enabled, name, driver, port, community, identifier });
+    await api.post('/api/ups', { enabled, name, driver, port, community, identifier, username, password });
     await loadUps();
   } catch (err) {
     msg.style.color = 'var(--danger)';
