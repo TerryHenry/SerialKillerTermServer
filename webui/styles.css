@@ -84,6 +84,17 @@ body.app-mode {
   margin: 0 0 4px 0;
 }
 
+/* Overrides the generic .hint sizing it also carries -- this is the whole point of
+   the hostname-on-login option (telling identical-looking boxes apart at a glance),
+   so it needs to actually read as a headline, not a footnote. */
+#loginHostname {
+  font-size: 16px;
+  color: var(--text);
+  font-weight: 600;
+  text-align: center;
+  margin: 0 0 4px 0;
+}
+
 .auth-logo {
   width: 96px;
   height: 96px;
