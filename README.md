@@ -382,11 +382,6 @@ Updates** (so admins know a newer version exists), just without an
 - Syslog forwarding is plain UDP (standard for BSD/RFC 3164 syslog) —
   unencrypted and unauthenticated in transit. Fine on a trusted LAN
   alongside the collector; route it through a VPN otherwise.
-- `npm audit` is clean except one moderate `qs`/`express` advisory that
-  can't be resolved without a major Express 4→5 upgrade — a bigger, separate
-  effort given how much routing/middleware behavior a major version bump
-  touches. Everything else (including the `multer` DoS advisories) is
-  patched.
 
 ## License
 
