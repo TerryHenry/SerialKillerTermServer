@@ -19,6 +19,33 @@ backup/restore — see [HANDBOOK.html](HANDBOOK.html).
 <img width="1490" height="814" alt="image" src="https://github.com/user-attachments/assets/c5cd8623-336a-4c81-8d39-650f0b81a000" />
 <img width="648" height="372" alt="image" src="https://github.com/user-attachments/assets/22284b15-c48d-4b31-95dc-adb8049bcb1f" />
 
+## Features at a glance
+
+**Console access**
+- SSH-to-serial on any number of ports, with several simultaneous users per port
+- Per-port access modes (exclusive, shared read/write, first-writer, monitor-only) and per-user read/write or read-only permissions
+- Browser-based serial console alongside SSH, both visible and killable from one Sessions tab
+- Baud-rate auto-detect, per-port traffic counters, and optional session capture to file
+
+**Administration**
+- Web admin UI over HTTPS, with multiple admin accounts, login throttling, an enforceable password policy (including a breached-password check), and optional TOTP two-factor authentication
+- Console users from the UI or a bulk CSV import, with password and/or SSH public-key login
+- Audit log, optional syslog forwarding, config backup/restore, and factory reset
+- Configurable dashboard, TLS certificate management, and an opt-in setting to show the box's hostname on the login screen
+
+**Network and services**
+- Static IP, DNS, NTP, timezone and Wi-Fi settings from the UI
+- LLDP / CDP / FDP neighbor discovery
+- Built-in TFTP server
+- Batch actions: run one script against several serial ports
+
+**Fleet and maintenance**
+- Optional management by a [Central Office](https://github.com/TerryHenry/central-office-hub) hub over an outbound-only encrypted tunnel, which detects and recovers from a stalled connection by itself
+- Opt-in remote diagnostic shell the hub can open on the box (off by default, enabled locally)
+- One-click in-place updates, signature- and checksum-verified, with rollback
+
+The sections below cover each of these in detail.
+
 ## What's on the image
 
 - **SSH server** (default port `2222`) — each user logs in over SSH and is
